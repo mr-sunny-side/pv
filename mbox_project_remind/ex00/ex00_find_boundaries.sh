@@ -1,0 +1,1 @@
+grep "^From " sample.mbox
