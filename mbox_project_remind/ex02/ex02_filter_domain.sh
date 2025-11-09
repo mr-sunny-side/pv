@@ -1,1 +1,1 @@
-grep "To: .*@digitalgeek.tech" sample.mbox
+grep "^To: .*@digitalgeek.tech" sample.mbox
