@@ -11,7 +11,7 @@ def	ext_sender(line):
 		if matched:
 			return matched.group()
 		else:
-			print(f"couldn't extract '{line}")
+			print(f"couldn't extract '{line}'")
 			return line
 
 def	conf_start(line):
