@@ -4,9 +4,11 @@ import sys
 def	process_sender(sender, matched):
 	if sender and matched:
 		ext_to_index_domain(sender)
-	return None, False
+		return True
+	return False
 
-
+def	reset_variable():
+	return None, None
 
 def	index_domain(line):
 	if line:
@@ -27,10 +29,12 @@ def	ext_to_index_domain(line):
 		return None
 
 def	conf_start(line):
-	if line:
-		if line.startswith("From "):
-			return True
-		return False
+	# if line:
+	# 	if line.startswith("From "):
+	# 		return True
+	# 	return False
+	return line and line.startswith("From ")
+	# 真偽の判断をしてるだけなので「短絡評価」でいい
 
 def	conf_receiver(line):
 	if line:
@@ -44,30 +48,38 @@ def	conf_sender(line):
 		if line.startswith("From: "):
 			return line
 		return None
+	# return line and line.startswith("From: ")
+	# conf_start()と同じに見えるが、
+	# この関数はext_to_index_domain(line)の為に、必ずNoneかlineを返す必要がある
+	# 今の設計だと、自動的に関数が連なって呼び出されるので、バグの発見が難しい
 
 if len(sys.argv) != 3:
 	print("number of arguments must be 3")
 	print(f"argv len: {len(sys.argv)}")
 	sys.exit(1)
 else:
-	senders_domain = {}
-	matched = False
-	sender = None
 	file_name = sys.argv[1]
+	filter_receiver = re.escape(sys.argv[2])
+	senders_domain = {}
 	# re.escape()が必要になるのは、正規表現の場合に記号が含まれる場合のみ
 	# 引数として渡すなら、文字列扱いなのでいい（多分）
-	filter_receiver = re.escape(sys.argv[2])
 	with open(file_name, "r") as file:
+
+		matched = None
+		sender = None
 		for line in file:
 			line = line.rstrip()
+			tmp_matched = conf_receiver(line)
+			tmp_sender = conf_sender(line)
+			# 関数の無駄な呼び出しを回避している
 			if conf_start(line):
-				sender, matched = process_sender(sender, matched)
-			if conf_sender(line):
-				sender = conf_sender(line)
-			if conf_receiver(line):
-				matched = conf_receiver(line)
+				process_sender(sender, matched)
+				sender, matched = reset_variable()
+			if tmp_sender:
+				sender = tmp_sender
+			if tmp_matched:
+				matched = tmp_matched
 		process_sender(sender, matched)
-
 	with open("senders.txt", "w") as file:
 		print("result...")
 		file.write("result...\n")
