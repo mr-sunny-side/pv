@@ -4,34 +4,27 @@ import sys
 def	process_sender(sender, matched):
 	if sender and matched:
 		ext_to_index_domain(sender)
-	return None,None
+	return None, False
+
+
 
 def	index_domain(line):
 	if line:
-		senders_domain[line] = senders_domain.get(line, 0) + 1
-		# domain, count = senders_domain.items(line)
-		# items.()は引数を取らず、ループ処理に用いる
-		# count = senders_domain[line]
-		# print(f"index {domain}...count{count}")
-		return True
-	return False
+		try:
+			domain = line.split("@")[1]
+			senders_domain[domain] = senders_domain.get(domain, 0) + 1
+			return True
+		except IndexError:
+			print(f"couldn't split domain: {line}")
+			senders_domain[line] = senders_domain.get(line, 0) + 1
+			return False
 
 def	ext_to_index_domain(line):
 	if line:
 		matched = re.search(r"[\w\.-]+@[\w\.-]+", line)
-		try:
-			if matched:
-				return index_domain((matched.group()).split("@")[1])
-		except IndexError:
-			print("couldn't split sender address")
-			return index_domain(line)
-
-# def	ext_sender(line):
-# 	if line:
-# 		matched = re.search(r"[\w\.-]+@[\w\.-]+", line)
-# 		if matched:
-# 			return matched.group()
-# 		return None
+		if matched:
+			return index_domain(matched.group())
+		return None
 
 def	conf_start(line):
 	if line:
@@ -53,14 +46,17 @@ def	conf_sender(line):
 		return None
 
 if len(sys.argv) != 3:
-	print("number of argument is incorrect")
+	print("number of arguments must be 3")
+	print(f"argv len: {len(sys.argv)}")
 	sys.exit(1)
 else:
-	file_name = sys.argv[1]
-	filter_receiver = re.escape(sys.argv[2])
 	senders_domain = {}
+	matched = False
 	sender = None
-	matched = None
+	file_name = sys.argv[1]
+	# re.escape()が必要になるのは、正規表現の場合に記号が含まれる場合のみ
+	# 引数として渡すなら、文字列扱いなのでいい（多分）
+	filter_receiver = re.escape(sys.argv[2])
 	with open(file_name, "r") as file:
 		for line in file:
 			line = line.rstrip()
@@ -71,6 +67,11 @@ else:
 			if conf_receiver(line):
 				matched = conf_receiver(line)
 		process_sender(sender, matched)
+
+	with open("senders.txt", "w") as file:
 		print("result...")
+		file.write("result...\n")
 		for domain, count in senders_domain.items():
-			print(f"domain: {domain}...{count}")
+			output_line = f"domain: {domain}...{count}"
+			print(output_line)
+			file.write(output_line + "\n")

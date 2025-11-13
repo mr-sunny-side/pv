@@ -1,0 +1,5 @@
+result...
+domain: github.com...1
+domain: aws.amazon.com...1
+domain: slack.com...1
+domain: digitalocean.com...1
