@@ -1,17 +1,35 @@
 import re
 import sys
 
-def	print_sender(sender, matched):
+def	process_sender(sender, matched):
 	if sender and matched:
-		print(sender)
+		ext_to_index_domain(sender)
 	return None,None
 
-def	ext_sender(line):
+def	index_domain(line):
+	if line:
+		senders_domain[line] = senders_domain.get(line, 0) + 1
+		domain, count = senders_domain.items(line)
+		print(f"index {domain}...count{count}")
+		return True
+	return False
+
+def	ext_to_index_domain(line):
 	if line:
 		matched = re.search(r"[\w\.-]+@[\w\.-]+", line)
-		if matched:
-			return matched.group()
-		return None
+		try:
+			if matched:
+				return index_domain((matched.group()).split("@")[1])
+		except IndexError:
+			print("couldn't split sender address")
+			return index_domain(line)
+
+# def	ext_sender(line):
+# 	if line:
+# 		matched = re.search(r"[\w\.-]+@[\w\.-]+", line)
+# 		if matched:
+# 			return matched.group()
+# 		return None
 
 def	conf_start(line):
 	if line:
@@ -26,10 +44,10 @@ def	conf_receiver(line):
 			return True
 		return False
 
-def	conf_to_ext_sender(line):
+def	conf_sender(line):
 	if line:
 		if line.startswith("From: "):
-			return ext_sender(line)
+			return line
 		return None
 
 if len(sys.argv) != 3:
@@ -38,14 +56,19 @@ if len(sys.argv) != 3:
 else:
 	file_name = sys.argv[1]
 	filter_receiver = re.escape(sys.argv[2])
+	senders_domain = {}
 	sender = None
 	matched = None
 	with open(file_name, "r") as file:
 		for line in file:
+			line = line.rstrip()
 			if conf_start(line):
-				sender, matched = print_sender(sender, matched)
-			if conf_to_ext_sender(line):
-				sender = conf_to_ext_sender(line)
+				sender, matched = process_sender(sender, matched)
+			if conf_sender(line):
+				sender = conf_sender(line)
 			if conf_receiver(line):
 				matched = conf_receiver(line)
-		print_sender(sender, matched)
+		process_sender(sender, matched)
+		print("result...")
+		for domain, count in senders_domain.items():
+			print(f"domain:{domain}...{count}")
