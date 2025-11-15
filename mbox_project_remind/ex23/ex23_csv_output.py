@@ -1,11 +1,12 @@
 import re
 import sys
+import csv
 
 def	process_list(sender, recipient):
 	# 最後にsenderとmatchedの値をリセットする
 	if sender and recipient:
-		# ext_senderで抽出したアドレス（戻り値）を再代入
-		# その上でext_domain_toに渡す
+		# ext_sender()で抽出したアドレス（戻り値）を再代入
+		# その上でext_domain_to()に渡す
 		sender = ext_sender_to(sender)
 		ext_domain_to(sender)
 	return None, None
@@ -86,6 +87,11 @@ else:
 			if tmp_matched:
 				matched = tmp_matched
 		process_list(sender, matched)
+
+	with open("senders.csv", "w", newline='') as file:
+		writer = csv.writer(file)
+		writer.writerow(["sender", "domain", "recipient"])
 		# zip関数とは？
 		for sender, domain, recipient in zip(sender_list, domain_list, recipient_list):
+			writer.writerow([{sender}, {domain}, {recipient}])
 			print(f"{sender}, {domain}, {recipient}")
