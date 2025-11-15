@@ -93,5 +93,9 @@ else:
 		writer.writerow(["sender", "domain", "recipient"])
 		# zip関数とは？
 		for sender, domain, recipient in zip(sender_list, domain_list, recipient_list):
-			writer.writerow([{sender}, {domain}, {recipient}])
+			writer.writerow([sender, domain, recipient])
 			print(f"{sender}, {domain}, {recipient}")
+
+# 各ext関数が失敗した場合、リスト長が不均一になってしまうので、そのエラーハンドリング
+# open関数のmatched変数は、実際にはbool型ではないので、変数名を修正
+# 40行目のエラーハンドリングでは、リスト不整合が修正できないので、要改善

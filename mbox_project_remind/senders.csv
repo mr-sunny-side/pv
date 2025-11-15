@@ -1,5 +1,5 @@
 sender,domain,recipient
-{'notifications@github.com'},{'github.com'},{'user@digitalgeek.tech'}
-{'billing@aws.amazon.com'},{'aws.amazon.com'},{'admin@digitalgeek.tech'}
-{'notifications@slack.com'},{'slack.com'},{'user@digitalgeek.tech'}
-{'noreply@digitalocean.com'},{'digitalocean.com'},{'admin@digitalgeek.tech'}
+notifications@github.com,github.com,user@digitalgeek.tech
+billing@aws.amazon.com,aws.amazon.com,admin@digitalgeek.tech
+notifications@slack.com,slack.com,user@digitalgeek.tech
+noreply@digitalocean.com,digitalocean.com,admin@digitalgeek.tech
