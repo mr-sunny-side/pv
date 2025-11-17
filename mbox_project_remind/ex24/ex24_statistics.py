@@ -90,8 +90,11 @@ else:
 		frequent_domain = max(domain_dict, key=domain_dict.get)
 		writer.writerow([mail_count, matched_count, unique_domain, frequent_domain])
 		print("analytics...")
-		print(f"{'total mails:':<30} {mail_count:>15}")
-		# print(f"{'matched ' +recipient+ ' count:':<30} {matched_count:>15}")
-		print(f"matched {recipient} count:{matched_count:>15}")
-		print(f"{'unique domain count:':<30} {unique_domain:>15}")
-		print(f"{'frequent domain:':<30} {frequent_domain:>15}")
+		print(f"{'total mails:':<30}{mail_count:>15}")
+		print(f"{'matched ' +recipient+ ' count:':<30}{matched_count:>15}")
+		# digital.geekが16文字。30 + : = 31 → 31 + 15 = 45
+		# 他の行 30 + 15 = 45
+		# だからズレて正解
+		# print(f"matched {recipient} count:{matched_count:>15}")
+		print(f"{'unique domain count:':<30}{unique_domain:>15}")
+		print(f"{'frequent domain:':<30}{frequent_domain:>15}")
