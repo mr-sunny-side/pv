@@ -82,7 +82,7 @@ else:
 				mail_count += 1
 				sender, matched, matched_count = process_mail(sender, matched, matched_count)
 			if tmp_sender:
-				sender = conf_sender(tmp_sender)
+				sender = tmp_sender
 				domain = ext_sender_to(tmp_sender)
 				dict_domain(domain)
 			if tmp_matched:
@@ -101,7 +101,7 @@ else:
 		print("analytics...")
 		print(f"{'total mails:':<40}{mail_count:>15}")
 		print(f"{'matched ' +recipient+ ' count:':<40}{matched_count:>15}")
-		# digital.geekが16文字。30 + : = 31 → 31 + 15 = 45
+		# digital.geekが16文字。30 + : = 31 → 31 + 15 = 46
 		# 他の行 30 + 15 = 45
 		# だからズレて正解
 		# print(f"matched {recipient} count:{matched_count:>15}")
