@@ -32,7 +32,13 @@ def	list_domain(line):
 def	ext_sender_to(line):
 	if line:
 		matched = re.search(r"[\w\.-]+@[\w\.-]+", line)
-		return matched and list_sender(matched.group())
+		if matched:
+			return list_sender(matched.group())
+		else:
+			# 正規表現マッチ失敗時、元のlineを保存してリスト不整合を防ぐ
+			print(f"dose'nt matched mail:{mail_count} line:{line}")
+			return list_sender(line)
+	return None
 
 def	ext_domain_to(line):
 	if line:
@@ -40,8 +46,8 @@ def	ext_domain_to(line):
 			domain = line.split("@")[1]
 			return list_domain(domain)
 		except IndexError:
-			print(f"couldn't split line: {line}")
-			return list_domain(line)
+			print(f"couldn't split mail:{mail_count} line:{line}")
+			return list_domain("PARSE_ERROR")
 
 def	conf_start(line):
 	return line and line.startswith("From ")
@@ -71,27 +77,29 @@ else:
 	domain_list = []
 	recipient = re.escape(sys.argv[2])
 	file_name = sys.argv[1]
+	mail_count = -1
 	sender = None
-	matched = None
+	recipe_holder = None
 	with open(file_name, "r") as file:
 		for line in file:
 			line = line.rstrip()
 			# 判定のために、tmpが必要
 			# 判定が通ったら、それぞれの変数に代入する
 			tmp_sender = conf_sender(line)
-			tmp_matched = conf_recipient_to(line)
+			tmp_r_holder = conf_recipient_to(line)
 			if conf_start(line):
-				sender, matched = process_list(sender, matched)
+				mail_count += 1
+				sender, recipe_holder = process_list(sender, recipe_holder)
 			if tmp_sender:
 				sender = tmp_sender
-			if tmp_matched:
-				matched = tmp_matched
-		process_list(sender, matched)
+			if tmp_r_holder:
+				recipe_holder = tmp_r_holder
+		process_list(sender, recipe_holder)
+		mail_count += 1
 
 	with open("senders.csv", "w", newline='') as file:
 		writer = csv.writer(file)
 		writer.writerow(["sender", "domain", "recipient"])
-		# zip関数とは？
 		for sender, domain, recipient in zip(sender_list, domain_list, recipient_list):
 			writer.writerow([sender, domain, recipient])
 			print(f"{sender}, {domain}, {recipient}")
