@@ -12,7 +12,7 @@ import time
 
 def	dict_domain(domain):
 	if domain:
-		domains_dict[domain] = domains_dict[domain].get(domain, 0) + 1
+		domains_dict[domain] = domains_dict.get(domain, 0) + 1
 
 def	ext_domain(sender):
 	if sender:
@@ -38,24 +38,33 @@ def	is_for_rcpt(to_line):
 			return True
 		return False
 
-def	time_monitor(current_time, last_time, start_time):
+def	time_monitor(idx, current_time, last_time, start_time):
 	if current_time - last_time >= 0.1:
 		elapsed = current_time - start_time
 		print(f"Processing... mail {idx}: {elapsed:.1f}s", end='\r', flush=True)
 		return current_time
+	return last_time
 
 def	progress_monitor(idx, start_time):
 	if idx % 100 == 0:
 		prog_time = time.time() - start_time
-		print(f"{idx} mails completed: {prog_time}s")
+		print(f"{idx} mails completed: {prog_time:.1f}s" + " " *20)
 
-def	print_result(idx, total_time, domains_dict, rcpt_count):
+def	print_result(idx, recipient, total_time, domains_dict, rcpt_count):
 	sorted_domains = sorted(domains_dict.items(), key=lambda x: x[1], reverse=True)
 	print("=== Result ===")
 	print(f"Total number of mail: {idx}")
 	print(f"Number of sent to {recipient}: {rcpt_count}")
 	print(f"Number of unique domain: {len(domains_dict)}")
-	# トップ10 ドメインを表示
+	print(f"Total processing tame: {total_time:.1f}s")
+	print("")
+	print("=== Top 10 senders in the unique domain ===")
+	i = 1
+	for domain, count in sorted_domains:
+		if i > 10:
+			break
+		print(f"{str(i)+'.':<3} {domain:<50}: {count:>10} times")
+		i += 1
 
 if len(sys.argv) != 3:
 	print("Expected arguments: [this file] [file_name.mbox] [recipient domain]")
@@ -66,22 +75,23 @@ else:
 	recipient = re.escape(sys.argv[2])
 	mbox = mailbox.mbox(file_name)
 	domains_dict = {}
-	with open(file_name, "r", encoding="utf=8", error="ignore") as file:
-		start_time = time.time()
-		last_time = start_time
-		rcpt_count = 0
-		for idx, mails in enumerate(mbox, 1):
-			current_time = time.time()
-			bool_rcpt = is_for_rcpt(mbox["to"])
-			last_time = time_monitor(current_time, last_time, start_time)
-			progress_monitor(idx, start_time)
-			if bool_rcpt:
-				rcpt_count += 1
-			sender = ext_sender(mbox["from"])
-			domain = ext_domain(sender)
-			dict_domain(domain)
-		total_time = current_time - start_time
-		print_result(idx, total_time, domains_dict, rcpt_count)
+	# with open(file_name, "r", encoding="utf=8", errors="ignore") as file:
+	start_time = time.time()
+	last_time = start_time
+	rcpt_count = 0
+
+	for idx, mails in enumerate(mbox, 1):
+		current_time = time.time()
+		bool_rcpt = is_for_rcpt(mails["to"])
+		last_time = time_monitor(idx, current_time, last_time, start_time)
+		progress_monitor(idx, start_time)
+		if bool_rcpt:
+			rcpt_count += 1
+		sender = ext_sender(mails["from"])
+		domain = ext_domain(sender)
+		dict_domain(domain)
+	total_time = current_time - start_time
+	print_result(idx, recipient, total_time, domains_dict, rcpt_count)
 
 
 
