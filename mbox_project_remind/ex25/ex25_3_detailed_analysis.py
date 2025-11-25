@@ -1,4 +1,5 @@
 import sys
+import csv
 import time
 import mailbox
 from datetime import datetime
@@ -101,4 +102,15 @@ else:
 		date_line = mails['date']
 		date_obj = parsedate_to_datetime(date_line) if date_line else None
 		subject = mails['subject'] or '(no subject)'
-		domains_dict.add_mail(domain, date_obj, subject)
+		domains_dict[domain].add_mail(date_obj, subject)
+
+# - メール数
+# - 最初の受信日
+# - 最後の受信日
+# - 代表的な件名（最も頻繁な件名トップ3）
+# - 平均メール間隔（日数）
+# ※ 練習の為、time.time()も利用
+
+	with open("ex25_3.csv", "w", newline='') as file:
+		writer = csv.writer(file)
+		writer.writerow(["domain", "count", "first_date", "last_date", "average_interval", "top3_subjects"])
