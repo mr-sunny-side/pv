@@ -4,6 +4,7 @@ import time
 import mailbox
 from datetime import datetime
 from email.utils import parsedate_to_datetime
+from email.header import decode_header
 
 # - メール数
 # - 最初の受信日
@@ -39,8 +40,8 @@ class DomainInfo:
 		elif not self.last_date or date_obj > self.last_date:
 			self.last_date = date_obj
 
-	def	top3_subject(self, n=3):
-		sorted_subject = sorted(self.subject.items, key=lambda x: x[1], reverse=True)
+	def	get_top3_subjects(self, n=3):
+		sorted_subject = sorted(self.subject.items(), key=lambda x: x[1], reverse=True)
 		return sorted_subject[:n]
 
 	def	get_average_interval(self):
@@ -52,14 +53,14 @@ class DomainInfo:
 def	time_monitor(last_update, current_update, prog_start, idx):
 	if current_update - last_update > 0.1:
 		elapsed = current_update - prog_start
-		print(f"Processing...mail:{idx} {elapsed:.1f}", end='\r', flush=True)
+		print(f"Processing... mail:{idx} {elapsed:.1f}s", end='\r', flush=True)
 		return current_update
 	return last_update
 
 def	progress_monitor(prog_start, current_update, idx):
-	if idx % 100 is 0:
+	if idx % 100 == 0:
 		elapsed = current_update - prog_start
-		print(f"{idx}mails complete {elapsed:.1f}" + " " * 20)
+		print(f"{idx} mails complete {elapsed:.1f}s" + " " * 20)
 
 def	ext_domain(from_line):
 	try:
@@ -82,7 +83,7 @@ prog_start = time.time()
 last_update = prog_start
 domains_dict = {}
 
-if len(sys.argv) is not 3:
+if len(sys.argv) != 3:
 	sys.exit(1)
 else:
 	for idx, mails in enumerate(mbox, 1):
@@ -94,7 +95,7 @@ else:
 		domain = ext_domain(mails['from'])
 		if not conf_rcpt(to_line):
 			continue
-		if not domain:
+		elif not domain:
 			continue
 		elif domain not in domains_dict:
 			domains_dict[domain] = DomainInfo()
@@ -113,4 +114,31 @@ else:
 
 	with open("ex25_3.csv", "w", newline='') as file:
 		writer = csv.writer(file)
-		writer.writerow(["domain", "count", "first_date", "last_date", "average_interval", "top3_subjects"])
+		writer.writerow([
+			"domain",
+			"count",
+			"first_date",
+			"last_date",
+			"average_interval",
+			"top3_subjects"
+		])
+
+		for domain, info in domains_dict.items():
+			first_date = info.first_date.strftime('%Y-%m-%d') if info.first_date else ''
+			last_date = info.last_date.strftime('%Y-%m-%d') if info.last_date else ''
+			interval = info.get_average_interval()
+			top3_subjects = info.get_top3_subjects(3)
+			top3_subjects_str = '|'.join(sub for sub, count in top3_subjects)
+
+			writer.writerow([
+				domain,
+				info.count,
+				first_date,
+				last_date,
+				f'{interval:.1f}',
+				top3_subjects_str
+			])
+
+	print("ex25_3.csv is completed")
+
+# subjectをエンコードする関数を作成
