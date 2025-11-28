@@ -2,11 +2,9 @@ import sys
 import mailbox
 from email.header import decode_header
 
-file_name = sys.argv[1]
-output_path = sys.argv[2]
+
 raw_subjects = []
 decoded_subjects = []
-mbox = mailbox.mbox(file_name)
 
 def	safe_decode_header(raw_subject):
 	if raw_subject:
@@ -16,16 +14,16 @@ def	safe_decode_header(raw_subject):
 			for data, encoding in unpacked:
 				# encodingの真偽だけで判断すると
 				# - エンコード規格が不明でbyte列が出力された際にエラーとなる
-				if encoding:
+				if isinstance(data, bytes):
 					decoded = data.decode(encoding or 'utf-8')
 				else:
 					decoded = data
 				parts.append(decoded)
 			result = ''.join(parts)
 			return result
-		except EncodingWarning as a:
+		except UnicodeDecodeError as a:
 			print(a)
-			return "Encoding Warning"
+			return "Decode Error"
 		except TypeError as a:
 			print(a)
 			return "Type Error"
@@ -37,6 +35,10 @@ def	safe_decode_header(raw_subject):
 if len(sys.argv) != 3:
 	sys.exit(1)
 else:
+	file_name = sys.argv[1]
+	output_path = sys.argv[2]
+	mbox = mailbox.mbox(file_name)
+
 	for idx, mails in enumerate(mbox, 1):
 		if idx > 30:
 			break
@@ -59,9 +61,9 @@ else:
 			print(decoded_sub)
 			file.write(decoded_sub + '\n')
 
-		all_sub_title = '=' *3 + 'All Subjects' + '=' *3
-		print(all_sub_title)
-		file.write('\n' + all_sub_title + '\n')
-		for decoded_sub in decoded_subjects:
-			print(decoded_sub)
-			file.write(decoded_sub + '\n')
+		# all_sub_title = '=' *3 + 'All Subjects' + '=' *3
+		# print(all_sub_title)
+		# file.write('\n' + all_sub_title + '\n')
+		# for decoded_sub in decoded_subjects:
+		# 	print(decoded_sub)
+		# 	file.write(decoded_sub + '\n')
