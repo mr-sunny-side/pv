@@ -4,13 +4,21 @@ import mailbox
 from email.utils import parsedate_to_datetime
 from datetime import datetime
 
-# **digitalgeek.tech宛のメールについて
-#	各送信者ドメインの以下の情報を収集せよ**。
+"""
 
-# - メール数
-# - 最初の受信日
-# - 最後の受信日
-# - 日数の差（last - first）
+digitalgeek.tech宛のメールについて、各送信者ドメインの以下の情報を収集せよ。
+
+- メール数
+- 最初の受信日
+- 最後の受信日
+- 日数の差（last - first）
+
+bashコマンド：
+	[実行ファイル] [.mboxパス] [出力ディレクトリパス] [対象受信者ドメイン]
+
+※この書き方を docstring というらしい。ショートカットが不明。
+
+"""
 
 class DomainDate:
 	def	__init__(self):
@@ -22,10 +30,11 @@ class DomainDate:
 	def	add_date(self, date_obj):
 
 		# ifは必ず検証するが、elifはifが真なら通過してしまう
+		# not ~ より is None のほうが明確
 		self.count += 1
-		if not self.first_date or self.first_date > date_obj:
+		if self.first_date is None or self.first_date > date_obj:
 			self.first_date = date_obj
-		if not self.last_date or self.last_date < date_obj:
+		if self.last_date is None or self.last_date < date_obj:
 			self.last_date = date_obj
 
 	def	diff_date(self):
@@ -74,18 +83,28 @@ else:
 		domains_date[domain].add_date(date_obj)
 
 	with open(f"{output_dir}/ex25_3b.txt", "w") as file:
-		title_length = 3
-		title = '=' *title_length + 'Date Statistics by Domain' + '=' *title_length
+		# センダリング機能を利用(標準機能)
+		title = 'Date Statistics by Domain'.center(60, '=')
 		# 辞書構造のインスタンスにおける、sorted関数の記述
-		sorted_dict = sorted(domains_date.items(), key=lambda x: x[1].count, reverse=True)
+		# 長いので改行
+		sorted_dict = sorted(
+			domains_date.items(),
+			key=lambda x: x[1].count,
+			reverse=True
+		)
 
 		print(title)
 		file.write(f"{title}\n")
 		# sorted関数はlistでタプルを返すので、items()は使わない
 		for domain, domain_info in sorted_dict:
-			first_date_str = domain_info.first_date.strftime("%Y-%m-%d")
-			last_date_str = domain_info.last_date.strftime("%Y-%m-%d")
+			# 日付データがNoneだった場合の防衛プログラミング
+			# 実際、DomainDateクラスのif文に問題があった際、ここでエラーが発生した
+			if domain_info.first_date and domain_info.last_date:
+				first_date_str = domain_info.first_date.strftime("%Y-%m-%d")
+				last_date_str = domain_info.last_date.strftime("%Y-%m-%d")
 
+			# 次回から独立関数で管理
+			# リストに保存して出力すると非常に効率がいい
 			print(domain)
 			file.write(f"{domain}\n")
 			print(f"	Mail Count: {domain_info.count}")
