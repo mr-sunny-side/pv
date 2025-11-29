@@ -74,7 +74,6 @@ else:
 		domains_date[domain].add_date(date_obj)
 
 	with open(f"{output_dir}/ex25_3b.txt", "w") as file:
-
 		title_length = 3
 		title = '=' *title_length + 'Date Statistics by Domain' + '=' *title_length
 		# 辞書構造のインスタンスにおける、sorted関数の記述
@@ -84,7 +83,6 @@ else:
 		file.write(f"{title}\n")
 		# sorted関数はlistでタプルを返すので、items()は使わない
 		for domain, domain_info in sorted_dict:
-
 			first_date_str = domain_info.first_date.strftime("%Y-%m-%d")
 			last_date_str = domain_info.last_date.strftime("%Y-%m-%d")
 
