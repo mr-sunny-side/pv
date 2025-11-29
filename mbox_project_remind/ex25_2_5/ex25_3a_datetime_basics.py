@@ -6,17 +6,14 @@ from datetime import datetime
 
 domains_dict = {}
 
+# DRY原則（Don't Repeat Yourself）に則り、最低限のデータのみ保存
+# 単一責任も考慮
 class DomainDate:
 	def	__init__(self):
-		self.iso_format = []
-		self.string_format = []
+		self.date = []
 
 	def	add_date(self, date_obj):
-		iso_formatted = date_obj.isoformat()
-		self.iso_format.append(iso_formatted)
-
-		string_formatted = date_obj.strftime("%Y-%m-%d")
-		self.string_format.append(string_formatted)
+		self.date.append(date_obj) if date_obj else None
 
 def	ext_domain(from_line):
 	if from_line:
@@ -24,11 +21,12 @@ def	ext_domain(from_line):
 			raw_domain = from_line.split('@')[1]
 			domain = re.search(r"[\w\.-]+", raw_domain)
 			return domain.group()
-		except IndexError as a:
-			print(a)
+		# 変数名は慣習に従い{e}とする
+		except IndexError as e:
+			print(e)
 			return "Index Error"
-		except Exception as a:
-			print(a)
+		except Exception as e:
+			print(e)
 			return "Unexpected Error"
 
 if len(sys.argv) != 3:
@@ -49,19 +47,21 @@ else:
 		domains_dict[domain].add_date(date_obj)
 
 	with open(f"{output_dir}/ex25_3a.txt", "w") as file:
+
 		title = '=' *3 + 'Mails Date Info' + '=' *3
 		print(title)
 		file.write('\n' + title + '\n')
 
+		# 見やすい出力フォーマットにした
 		for domain, date_info in domains_dict.items():
 			print(domain)
 			file.write('\n' + domain + '\n')
-			for string_format in date_info.string_format:
-				print('	' + string_format)
-				file.write('	' + string_format + '\n')
-			for iso_format in date_info.iso_format:
-				print('	' + iso_format)
-				file.write('	' + iso_format + '\n')
+			for date_obj in date_info.date:
+
+				str_format = date_obj.strftime("%Y-%m-%d")
+				iso_format = date_obj.isoformat()
+				print(f"	{str_format} | {iso_format}")
+				file.write(f"	{str_format} | {iso_format}\n")
 
 # isoformat関数を使って、辞書内オブジェクト（self.iso_format）にISO形式の日にちを保存する
 # - completed
