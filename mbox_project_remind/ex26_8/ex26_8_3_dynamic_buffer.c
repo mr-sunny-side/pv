@@ -7,21 +7,21 @@
 #define SEARCH_PREFIX "From: "
 #define PREFIX_LEN strlen(SEARCH_PREFIX)
 
-int	line_malloc(char **line, char *buffer, int line_num)
+int	line_malloc(char **line, char *buffer, int idx)
 {
 	// charは常に1byteなので、strlenで計算
-	line[line_num] = malloc(strlen(buffer) + 1);
-	if (line[line_num] == NULL) {
+	line[idx] = malloc(strlen(buffer) + 1);
+	if (line[idx] == NULL) {
 		fprintf(stderr, "Memory allocation failed\n");
 		return 1;
 	}
 	return 0;
 }
 
-void	free_err_line(char **line, int line_num)
+void	free_err_line(char **line, int idx)
 {
 	int	i;
-	for(i = 0; i < line_num; i++)
+	for(i = 0; i < idx; i++)
 		free(line[i]);
 }
 
@@ -52,34 +52,27 @@ int	main(int argc, char **argv)
 
 	char	buffer[BUFFER_SIZE];
 	char	*line[MAX_LINE];
-	int	line_num = 1;
+	// indexで何を数えているのか、indexとして使うのにふさわしいかは非常に重要な観点である
+	int	idx = 0;
 	int	malloc_result;
-	while (line_num <= MAX_LINE && fgets(buffer, sizeof(buffer), fp) != NULL) {
+	while (idx <= MAX_LINE && fgets(buffer, sizeof(buffer), fp) != NULL) {
 		if (strncmp(buffer, SEARCH_PREFIX, PREFIX_LEN) == 0) {
-			malloc_result = line_malloc(line, buffer, line_num);
-			strcpy(line[line_num], buffer);
+			malloc_result = line_malloc(line, buffer, idx);
+			strcpy(line[idx], buffer);
+			idx++;
 		}
 		if (malloc_result == 1) {
-			free_err_line(line, line_num);
+			free_err_line(line, idx);
 			return 1;
-		}
-
-
-		size_t buffer_len = strlen(buffer);
-		if (buffer_len > 0 && buffer[buffer_len -1] == '\n')
-			line_num++;
-		else {
-			move_fp(fp);
-			line_num++;
 		}
 	}
 	fclose(fp);
 
-	printf("=== Found %d matching line ===\n", line_num);
+	printf("=== Found %d matching line ===\n", idx);
 	int	i;
-	for (i = 0; i < line_num; i++) {
+	for (i = 0; i < idx; i++) {
 		// 同時に開放も行う
-		printf("%s\n", line[i]);
+		printf("%s", line[i]);
 		free(line[i]);
 	}
 	return 0;
