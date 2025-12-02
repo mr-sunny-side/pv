@@ -56,22 +56,7 @@ if (start == NULL) {
 
 ## 残存する可能性のあるバグ
 
-### 1. 行25の`strchr`呼び出し
-
-```c
-end = strchr(from_line, '\n');
-```
-
-**問題:**
-- `start`ではなく`from_line`から改行を探している
-- `start`の位置から改行までを探すべき
-
-**修正案:**
-```c
-end = strchr(start, '\n');
-```
-
-### 2. メモリリーク対策が不完全
+### 1. メモリリーク対策が不完全
 
 **問題箇所:** [ex26_8/ex26_8_4_extract_email.c:68-71](ex26_8/ex26_8_4_extract_email.c#L68-L71)
 
@@ -96,7 +81,7 @@ if (result == 1) {
 }
 ```
 
-### 3. `printf`のフォーマット指定
+### 2. `printf`のフォーマット指定
 
 **問題箇所:** [ex26_8/ex26_8_4_extract_email.c:73](ex26_8/ex26_8_4_extract_email.c#L73)
 
@@ -115,7 +100,7 @@ Line: From: test@example.com
 sender: test@example.com
 ```
 
-### 4. `PREFIX_LEN`の実装
+### 3. `PREFIX_LEN`の実装
 
 **問題箇所:** [ex26_8/ex26_8_4_extract_email.c:7](ex26_8/ex26_8_4_extract_email.c#L7)
 
@@ -140,16 +125,12 @@ static const size_t PREFIX_LEN = sizeof(SEARCH_PREFIX) - 1;
 
 ## 修正の優先順位
 
-### 🔴 高優先度
-1. **行25のバグ修正** - `strchr(from_line, '\n')` → `strchr(start, '\n')`
-   - 現在、間違った範囲からメールアドレスを抽出している可能性
-
 ### 🟡 中優先度
-2. **エラー時のファイルクローズ** - リソースリーク対策
-3. **`printf`の二重改行問題** - 出力の可読性向上
+1. **エラー時のファイルクローズ** - リソースリーク対策
+2. **`printf`の二重改行問題** - 出力の可読性向上
 
 ### 🟢 低優先度
-4. **`PREFIX_LEN`の最適化** - パフォーマンス改善（微小）
+3. **`PREFIX_LEN`の最適化** - パフォーマンス改善（微小）
 
 ## テスト推奨項目
 
@@ -174,4 +155,8 @@ static const size_t PREFIX_LEN = sizeof(SEARCH_PREFIX) - 1;
 
 ## まとめ
 
-最初のNULLポインタのバグは修正されましたが、**行25の`strchr(from_line, '\n')`**が最も重要な残存バグです。これを修正しないと、メールアドレスが正しく抽出されない可能性があります。
+最初のNULLポインタのバグは修正され、現在のコードロジックは正しく動作するはずです。
+
+**訂正:** 行25の`strchr(from_line, '\n')`は正しい実装です。スペース区切り形式では、行全体から改行を探す必要があるため、`from_line`を使用するのが適切です。`from_line`から探しても`start`から探しても同じ改行位置を指すため、現在の実装で問題ありません。
+
+残存する問題は、リソースリーク対策と出力フォーマットの改善のみです。

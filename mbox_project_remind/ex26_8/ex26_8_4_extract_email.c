@@ -4,7 +4,7 @@
 
 #define BUFFER_SIZE 1024
 #define SEARCH_PREFIX "From: "
-#define PREFIX_LEN strlen(SEARCH_PREFIX)
+#define PREFIX_LEN 6
 
 // 抽出と表示をストリーム処理するコード
 
@@ -68,9 +68,10 @@ int	main(int argc, char **argv)
 			int	result = ext_sender_and_copy(&email, buffer);
 			if (result == 1) {
 				fprintf(stderr, "Memory allocation failed\n");
+				fclose(fp);
 				return 1;
 			}
-			printf("Line: %s\n", buffer);
+			printf("Line: %s", buffer);
 			printf("sender: %s\n", email);
 			printf("\n");
 			free(email);
