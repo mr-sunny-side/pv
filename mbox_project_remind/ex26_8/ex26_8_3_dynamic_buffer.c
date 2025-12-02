@@ -27,13 +27,11 @@ void	free_err_line(char **line, int idx)
 
 void	move_fp(FILE *fp)
 {
+	// この関数はポインタを動かすだけなので、確実に'\n'で止まる記述は不要
 	int	c;
-	while ((c = fgetc(fp)) != EOF && c != '\n') {
+	while ((c = fgetc(fp)) != EOF && c != '\n')
 		;
-		if (c == '\n')
-			break;
-	}
-	printf("End of File\n");
+
 }
 
 int	main(int argc, char **argv)
@@ -54,7 +52,8 @@ int	main(int argc, char **argv)
 	char	*line[MAX_LINE];
 	// indexで何を数えているのか、indexとして使うのにふさわしいかは非常に重要な観点である
 	int	idx = 0;
-	int	malloc_result;
+	// 確実に代入されない変数は初期化する事
+	int	malloc_result = 0;
 	while (idx <= MAX_LINE && fgets(buffer, sizeof(buffer), fp) != NULL) {
 		if (strncmp(buffer, SEARCH_PREFIX, PREFIX_LEN) == 0) {
 			malloc_result = line_malloc(line, buffer, idx);
