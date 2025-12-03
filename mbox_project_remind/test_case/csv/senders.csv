@@ -1,5 +1,0 @@
-mail_count,sender,domain,recipient
-1,notifications@github.com,github.com,user@digitalgeek.tech
-2,billing@aws.amazon.com,aws.amazon.com,admin@digitalgeek.tech
-3,notifications@slack.com,slack.com,user@digitalgeek.tech
-4,noreply@digitalocean.com,digitalocean.com,admin@digitalgeek.tech

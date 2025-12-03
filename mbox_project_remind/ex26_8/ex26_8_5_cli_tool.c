@@ -33,4 +33,7 @@ int	main(int argc, char **argv)
 			// free(email)
 		}
 	}
+
+	fclose(fp);
+	return 0;
 }
