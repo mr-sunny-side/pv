@@ -37,13 +37,16 @@ mbox_ex() {
 
     local prog=$1
     local mbox=$2
-    local output=$TXT/${file}.txt
+    local prog_name=$(basename "$prog")
+    local output=$TXT_FILE/${prog_name}.txt
 
     $prog $mbox > $output
 
-    if [ $? -ep 0 ]; then
+    if [ $? -eq 0 ]; then
         echo "✓ Success"
-        echo "$prog $mbox > $output"
+        echo "argv[1] $prog"
+        echo "argv[2] $mbox"
+        echo " > $output"
     else
         echo "✕ Failed"
         echo "$prog $mbox > $output"
