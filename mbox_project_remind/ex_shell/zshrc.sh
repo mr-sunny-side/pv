@@ -29,14 +29,14 @@ export PATH="$PATH:$HOME/.local/bin"
 
 # .mbox_ex用 実行コマンド
 mbox_ex() {
-    if [ $# -ne 2 ]; then
+    if [ $# -ne 1 ]; then
         echo "Argument Error"
-        echo "func_ex [executable file] [file argv]"
+        echo "mbox_ex [executable file]"
         return 1
     fi
 
     local prog=$1
-    local mbox=$2
+    local mbox=$MBOX/google.mbox
     local prog_name=$(basename "$prog")
     local output=$TXT_FILE/${prog_name}.txt
 
@@ -44,12 +44,14 @@ mbox_ex() {
 
     if [ $? -eq 0 ]; then
         echo "✓ Success"
-        echo "argv[1] $prog"
-        echo "argv[2] $mbox"
+        echo "executable file: $prog_name"
+        echo "mbox file: $mbox"
         echo " > $output"
     else
         echo "✕ Failed"
-        echo "$prog $mbox > $output"
+        echo "executable file: $prog_name"
+        echo "mbox file: $mbox"
+        echo " > $output"
         return 1
     fi
 }

@@ -6,14 +6,49 @@
 #define SEARCH_PREFIX "From: "
 #define PREFIX_LEN 6
 
+void	print_usage(char *prog_name)
+{
+	printf("Usage: [%s] [.mbox]\n", prog_name);
+	printf("Extract senders email address from an .mbox file\n");
+	printf("\nOptions:\n");
+	printf(" -h --help	Show this help message\n");
+}
+
+int	ext_sender_and_copy(char *from_line, char **email)
+{
+	char	*start = strchr(from_line, '<');
+	char	*end;
+	if (start != NULL) {
+		start++;
+		end = strchr(from_line, '>');
+		if (end == NULL)
+			return 1;
+	} else if ((start = strchr(from_line, ' ')) != NULL) {
+		start++;
+		end = strchr(from_line, '\n');
+		if (end == NULL)
+			return 1;
+	}
+
+	int	interval = end - start;
+	*email = malloc(interval + 1);
+	if (*email == NULL)
+		return 1;
+	strncpy(*email, start, interval);
+	*email[interval] = '\0';
+	return 0;
+}
+
 int	main(int argc, char **argv)
 {
 	if (argc < 2) {
 		fprintf(stderr, "Argument Error\n");
 		return 1;
 	}
-	if (argv[1] == "-h" || argv[1] == "--help") {
-		// helpの表示
+	// 直接比較はできないので（アドレスの比較になる？）
+	// strcmpを使う
+	if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
+		print_usage(argv[0]);
 		return 0;
 	}
 
@@ -25,15 +60,21 @@ int	main(int argc, char **argv)
 	}
 
 	char	buffer[BUFFER_SIZE];
-	char	*email;
+	char	*email = NULL;
 	while (fgets(buffer, sizeof(buffer), fp) != NULL) {
 		if (strncmp(buffer, SEARCH_PREFIX, PREFIX_LEN) == 0) {
-			// ext_sender_and_copy
-			// printf
-			// free(email)
+			if (ext_sender_and_copy(buffer, &email) == 0) {
+				printf("email: %s", email);
+				free(email);
+			} else {
+				fprintf(stderr, "Extract Failed\n");
+				return 1;
+			}
 		}
 	}
 
 	fclose(fp);
 	return 0;
 }
+
+// valgrind、cppcheckを本格使用して、ロジックエラーを見つける
