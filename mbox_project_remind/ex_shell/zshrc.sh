@@ -7,6 +7,7 @@ alias 42cc='gcc -Wextra -Wall -Werror'
 
 # C言語静的解析ツール
 alias c_file_check='cppcheck --enable=all --suppress=missingIncludeSystem'
+alias c_valling='valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --num-callers=20 -v'
 
 # ======================================
 # プロジェクト用環境変数
@@ -70,7 +71,8 @@ compile_ex() {
 
     local code=$1
     local code_name=$(basename "$code")
-    local output=$C_FILE/${code_name}_file
+    local base_name=${code_name%.c}
+    local output=$C_FILE/${base_name}_file
 
     42cc $code -o $output
 

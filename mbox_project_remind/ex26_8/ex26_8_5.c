@@ -17,7 +17,7 @@ void	print_usage(char *prog_name)
 int	ext_sender_and_copy(char *from_line, char **email)
 {
 	char	*start = strchr(from_line, '<');
-	char	*end;
+	char	*end = NULL;
 	if (start != NULL) {
 		start++;
 		end = strchr(from_line, '>');
@@ -35,7 +35,8 @@ int	ext_sender_and_copy(char *from_line, char **email)
 	if (*email == NULL)
 		return 1;
 	strncpy(*email, start, interval);
-	*email[interval] = '\0';
+	// 演算子の優先順位忘れがちなので特に注意
+	(*email)[interval] = '\0';
 	return 0;
 }
 
@@ -64,7 +65,7 @@ int	main(int argc, char **argv)
 	while (fgets(buffer, sizeof(buffer), fp) != NULL) {
 		if (strncmp(buffer, SEARCH_PREFIX, PREFIX_LEN) == 0) {
 			if (ext_sender_and_copy(buffer, &email) == 0) {
-				printf("email: %s", email);
+				printf("email: %s\n", email);
 				free(email);
 			} else {
 				fprintf(stderr, "Extract Failed\n");
