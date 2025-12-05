@@ -72,7 +72,7 @@ compile_ex() {
     local code_name=$(basename "$code")
     local output=$C_FILE/${code_name}_file
 
-    42cc $code > $output
+    42cc $code -o $output
 
     if [ $? -eq 0 ]; then
         echo "✓ Success"
