@@ -27,7 +27,11 @@ export MBOX="$MBOX_PROJECT/mbox"
 # pipx（Pythonツール）をパスに追加
 export PATH="$PATH:$HOME/.local/bin"
 
-# .mbox_ex用 実行コマンド
+# ======================================
+# 独自シェルスクリプト
+# ======================================
+
+# .mbox_ex用 ファイル実行コマンド
 mbox_ex() {
     if [ $# -ne 1 ]; then
         echo "Argument Error"
@@ -53,5 +57,31 @@ mbox_ex() {
         echo "mbox file: $mbox"
         echo " > $output"
         return 1
+    fi
+}
+
+# 学習用コンパイルコマンド
+compile_ex() {
+    if [ $# -ne 1 ]; then
+        echo "Argument Error"
+        echo "compile_ex [.c file]"
+        return 1;
+    fi
+
+    local code=$1
+    local code_name=$(basename "$code")
+    local output=$C_FILE/${code_name}_file
+
+    42cc $code > $output
+
+    if [ $? -eq 0 ]; then
+        echo "✓ Success"
+        echo "Code file: $code_name"
+        echo "Output Path: $output"
+    else
+        echo "✕ failed"
+        echo "Code file: $code_name"
+        echo "Output Path: $output"
+        return 1;
     fi
 }

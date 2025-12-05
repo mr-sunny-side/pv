@@ -68,6 +68,8 @@ int	main(int argc, char **argv)
 				free(email);
 			} else {
 				fprintf(stderr, "Extract Failed\n");
+				free(email);
+				fclose(fp);
 				return 1;
 			}
 		}
