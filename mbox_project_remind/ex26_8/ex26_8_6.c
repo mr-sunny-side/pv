@@ -9,7 +9,7 @@
 void	print_help(char *prog_name)
 {
 	printf("=== How to Use ===\n");
-	printf("[This Program] [mbox File]\n");
+	printf("[%s] [mbox File]\n", prog_name);
 	printf("\nThis program will extract sender emails from an mbox file\n");
 	printf("command '-h' of '--help' to show this message\n");
 }
@@ -38,6 +38,17 @@ int	ext_sender_and_copy(char *from_line, char **email)
 	return 0;
 }
 
+void	count_line(FILE **fp, int *line_num)
+{
+	// bufferが\nに到達しているかを確認
+	// 到達していない場合、fpのポインタをそこまで進めてインクリメント
+
+	char	c;
+	while ((c = fgetc(*fp)) != EOF || c != '\n')
+		;
+	(*line_num)++;
+}
+
 int	main(int argc, char **argv)
 {
 	if (argc != 2) {
@@ -59,16 +70,16 @@ int	main(int argc, char **argv)
 
 	char	buffer[BUFFER_SIZE];
 	char	*email = NULL;
-	int	result = 0;
 	int	line_num = 0;
 	while (fgets(buffer, sizeof(buffer), fp) != NULL) {
 		if (strncmp(buffer, SEARCH_PREFIX, PREFIX_LEN) == 0) {
-			if ((result = ext_sender_and_copy(buffer, &email)) == 1) {
+			if (ext_sender_and_copy(buffer, &email) == 1) {
 				fprintf(stderr, "Cannot extract email\n");
 				free(email);
 				fclose(fp);
 				return 1;
 			}
+			count_line(&fp, &line_num);
 			printf("%d: %s", line_num, email);
 			free(email);
 		}
@@ -79,4 +90,5 @@ int	main(int argc, char **argv)
 }
 
 // line_numを安全に数える関数の作成
+// c_vallingでエラーを確認
 // clock()の実装
