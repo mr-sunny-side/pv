@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #define BUFFER_SIZE 1024
 #define SEARCH_PREFIX "From: "
@@ -73,8 +74,12 @@ int	main(int argc, char **argv)
 	char	*email = NULL;
 	int	line_num = 0;
 	while (fgets(buffer, sizeof(buffer), fp) != NULL) {
-		count_line(fp);
+		size_t	len = strlen(buffer);
+		// fpを動かす前に検証する必要がある
+		if (len > 0 && buffer[len - 1] != '\n')
+			count_line(fp);
 		line_num++;
+
 		if (strncmp(buffer, SEARCH_PREFIX, PREFIX_LEN) == 0) {
 			if (ext_sender_and_copy(buffer, &email) == 1) {
 				fprintf(stderr, "Cannot extract email\n");
@@ -91,6 +96,4 @@ int	main(int argc, char **argv)
 	return 0;
 }
 
-// line_numを安全に数える関数の作成
-// c_vallingでエラーを確認
 // clock()の実装
