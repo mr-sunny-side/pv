@@ -34,6 +34,7 @@ int	ext_sender_and_copy(char *from_line, char **email)
 	*email = malloc(interval + 1);
 	if (*email == NULL)
 		return 1;
+	strncpy(*email, start, interval);
 	(*email)[interval] = '\0';
 	return 0;
 }
@@ -44,9 +45,11 @@ void	count_line(FILE **fp, int *line_num)
 	// 到達していない場合、fpのポインタをそこまで進めてインクリメント
 
 	char	c;
-	while ((c = fgetc(*fp)) != EOF || c != '\n')
+	// 条件式の演算子に注意
+	while ((c = fgetc(*fp)) != EOF && c != '\n')
 		;
-	(*line_num)++;
+		if (c == '\n')
+			(*line_num)++;
 }
 
 int	main(int argc, char **argv)
@@ -79,10 +82,10 @@ int	main(int argc, char **argv)
 				fclose(fp);
 				return 1;
 			}
-			count_line(&fp, &line_num);
-			printf("%d: %s", line_num, email);
+			printf("%d: %s\n", line_num, email);
 			free(email);
 		}
+		count_line(&fp, &line_num);
 	}
 
 	fclose(fp);
