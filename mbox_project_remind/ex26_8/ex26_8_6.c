@@ -39,17 +39,15 @@ int	ext_sender_and_copy(char *from_line, char **email)
 	return 0;
 }
 
-void	count_line(FILE **fp, int *line_num)
+void	count_line(FILE *fp)
 {
 	// bufferが\nに到達しているかを確認
 	// 到達していない場合、fpのポインタをそこまで進めてインクリメント
 
 	char	c;
 	// 条件式の演算子に注意
-	while ((c = fgetc(*fp)) != EOF && c != '\n')
+	while ((c = fgetc(fp)) != EOF && c != '\n')
 		;
-		if (c == '\n')
-			(*line_num)++;
 }
 
 int	main(int argc, char **argv)
@@ -75,6 +73,8 @@ int	main(int argc, char **argv)
 	char	*email = NULL;
 	int	line_num = 0;
 	while (fgets(buffer, sizeof(buffer), fp) != NULL) {
+		count_line(fp);
+		line_num++;
 		if (strncmp(buffer, SEARCH_PREFIX, PREFIX_LEN) == 0) {
 			if (ext_sender_and_copy(buffer, &email) == 1) {
 				fprintf(stderr, "Cannot extract email\n");
@@ -85,7 +85,6 @@ int	main(int argc, char **argv)
 			printf("%d: %s\n", line_num, email);
 			free(email);
 		}
-		count_line(&fp, &line_num);
 	}
 
 	fclose(fp);
