@@ -42,8 +42,9 @@ int	ext_sender_and_copy(char *from_line, char **email)
 
 void	count_line(FILE *fp)
 {
-	// bufferが\nに到達しているかを確認
-	// 到達していない場合、fpのポインタをそこまで進めてインクリメント
+	// 到達していない場合、fpのポインタをそこまで進める
+	// 動かすのはfget関数が返すファイル構造体のポインタなので
+		// fpを動かすわけでは無い。よってasteriskは1つ
 
 	char	c;
 	// 条件式の演算子に注意
