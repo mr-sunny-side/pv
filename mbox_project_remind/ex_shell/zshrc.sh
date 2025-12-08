@@ -48,15 +48,19 @@ mbox_ex() {
     $prog $mbox > $output
 
     if [ $? -eq 0 ]; then
+        echo "=========="
         echo "✓ Success"
         echo "executable file: $prog_name"
         echo "mbox file: $mbox"
         echo " > $output"
+        echo "=========="
     else
+        echo "=========="
         echo "✕ Failed"
         echo "executable file: $prog_name"
         echo "mbox file: $mbox"
         echo " > $output"
+        echo "=========="
         return 1
     fi
 }
@@ -77,13 +81,17 @@ compile_ex() {
     42cc $code -o $output
 
     if [ $? -eq 0 ]; then
+        echo "=========="
         echo "✓ Success"
         echo "Code file: $code_name"
         echo "Output Path: $output"
+        echo "=========="
     else
+        echo "=========="
         echo "✕ failed"
         echo "Code file: $code_name"
         echo "Output Path: $output"
+        echo "=========="
         return 1;
     fi
 }

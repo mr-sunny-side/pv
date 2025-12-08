@@ -76,6 +76,7 @@ int	main(int argc, char **argv)
 	while (fgets(buffer, sizeof(buffer), fp) != NULL) {
 		size_t	len = strlen(buffer);
 		// fpを動かす前に検証する必要がある
+		// bufferの最後はNULL文字だから、そのまま行くと必ず動いてしまう
 		if (len > 0 && buffer[len - 1] != '\n')
 			count_line(fp);
 		line_num++;
