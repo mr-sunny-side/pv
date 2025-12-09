@@ -71,6 +71,8 @@ int	main(int argc, char **argv)
 		return 1;
 	}
 
+	time_t	start_time = clock();
+
 	char	buffer[BUFFER_SIZE];
 	char	*email = NULL;
 	int	line_num = 0;
@@ -93,6 +95,15 @@ int	main(int argc, char **argv)
 			free(email);
 		}
 	}
+
+	time_t	end_time = clock();
+	double	cpu_time = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;
+
+	// 標準出力への表示を制限している
+	fprintf(stderr, "=== Statistics ===\n");
+	fprintf(stderr, "\nTotal Lines: %d\n", line_num);
+	fprintf(stderr, "Prosessing Time: %.3f s\n", cpu_time);
+
 
 	fclose(fp);
 	return 0;
