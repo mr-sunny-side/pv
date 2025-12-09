@@ -12,7 +12,7 @@ void	print_help(char *prog_name)
 	printf("=== How to Use ===\n");
 	printf("[%s] [mbox File]\n", prog_name);
 	printf("\nThis program will extract sender emails from an mbox file\n");
-	printf("command '-h' of '--help' to show this message\n");
+	printf("command '-h' or '--help' to show this message\n");
 }
 
 int	ext_sender_and_copy(char *from_line, char **email)
@@ -23,13 +23,13 @@ int	ext_sender_and_copy(char *from_line, char **email)
 	if ((start = strchr(from_line, '<')) != NULL) {
 		start++;
 		if ((end = strchr(from_line, '>')) == NULL)
-			return 1;
+			return -1;
 	} else if ((start = strchr(from_line, ' ')) != NULL) {
 		start++;
 		if ((end = strchr(from_line, '\n')) == NULL)
-			return 1;
+			return -1;
 	} else
-		return 1;
+		return -1;
 
 	int	interval = end - start;
 	*email = malloc(interval + 1);
@@ -71,7 +71,14 @@ int	main(int argc, char **argv)
 		return 1;
 	}
 
-	time_t	start_time = clock();
+	// クロックティックの型はclock_t
+	// エラーハンドリングも行う
+	clock_t	start_time = clock();
+	if (start_time == (clock_t)-1) {
+		fprintf(stderr, "start_time: clock() failed\n");
+		fclose(fp);
+		return 1;
+	}
 
 	char	buffer[BUFFER_SIZE];
 	char	*email = NULL;
@@ -86,23 +93,35 @@ int	main(int argc, char **argv)
 
 		if (strncmp(buffer, SEARCH_PREFIX, PREFIX_LEN) == 0) {
 			if (ext_sender_and_copy(buffer, &email) == 1) {
-				fprintf(stderr, "Cannot extract email\n");
+				fprintf(stderr, "Cannot malloc email\n");
 				free(email);
 				fclose(fp);
 				return 1;
+			} else if (ext_sender_and_copy(buffer, &email) == -1) {
+				// mallocによるエラーを分離することでfreeを安全に行う
+				fprintf(stderr, "Cannot extract email\n");
+				fclose(fp);
+				return -1;
 			}
 			printf("%d: %s\n", line_num, email);
 			free(email);
+			// free後は未定義になるので、再初期化して安全な動作を保証する
+			email = NULL;
 		}
 	}
 
-	time_t	end_time = clock();
+	clock_t	end_time = clock();
+	if (end_time == (clock_t)-1) {
+		fprintf(stderr, "end_time: clock() failed\n");
+		fclose(fp);
+		return 1;
+	}
 	double	cpu_time = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;
 
 	// 標準出力への表示を制限している
 	fprintf(stderr, "=== Statistics ===\n");
 	fprintf(stderr, "\nTotal Lines: %d\n", line_num);
-	fprintf(stderr, "Prosessing Time: %.3f s\n", cpu_time);
+	fprintf(stderr, "Processing Time: %.3f s\n", cpu_time);
 
 
 	fclose(fp);
