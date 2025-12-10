@@ -2,9 +2,15 @@ import sys
 import re
 import time
 
-# 今回の目的は.cとcpc時間を比較する事
-# その為デコードは行わず、純粋にFrom: からemailを取り出す処理を行う
-# 12-10: テスト実行によるcpu時間比較用のShellScriptを作成する
+"""
+今回の目的は.cとcpc時間を比較する事
+その為デコードは行わず、純粋にFrom: からemailを取り出す処理を行う
+
+12-10:
+    1. このコードのレビュー
+    2. テスト実行によるCPU時間比較のためのShellScript作成
+"""
+
 
 def print_help(prog_name):
     print("=== How to Use ===", file=sys.stderr)
@@ -56,8 +62,12 @@ def main():
     print_status(line_num, cpu_time)
     return 0
 
-# このソースコードが直接実行された場合、mainの戻り値をプログラムが返す
-# .cのmain関数的な実装をする際の記述
-# もっとも、.pyでは必ずしも必要ではないので、明確な意図があることが多い。詳しくはNotionを参照
+
+"""
+このソースコードが直接実行された場合、mainの戻り値をプログラムが返す
+.cのmain関数的な実装をする際の記述
+もっとも、.pyでは必ずしも必要ではないので、明確な意図があることが多い。詳しくはNotionを参照
+"""
+
 if __name__ == '__main__':
     sys.exit(main())
