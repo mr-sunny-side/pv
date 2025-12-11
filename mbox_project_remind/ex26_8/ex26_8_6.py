@@ -23,7 +23,7 @@ def print_status(line_num, cpu_time):
     print("=== Statistics ===", file=sys.stderr)
     print("", file=sys.stderr)
     print(f"Total Lines: {line_num}", file=sys.stderr)
-    print(f"Processing Time: {cpu_time:.3f}", file=sys.stderr)
+    print(f"Processing Time: {cpu_time:.3f} s", file=sys.stderr)
 
 def ext_sender(from_line):
     if from_line:
