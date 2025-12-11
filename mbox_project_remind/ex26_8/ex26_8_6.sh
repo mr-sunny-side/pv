@@ -6,11 +6,6 @@
 
 ex26_8_ex () {
 
-    if [ $# -ne 1 ]; then
-        echo "Argument Error"
-        return 1
-    fi
-
     local prog=$1
     local prog_c=$C_FILE/${prog}_file
     local prog_py=$MBOX_PROJECT/ex26_8/${prog}.py
@@ -22,6 +17,11 @@ ex26_8_ex () {
 
     for i in {1..5}; do
         ($prog_c $mbox 2>&1) | grep "Processing Time" >> $output;
+        if [ $? -ne 0 ]; then
+            echo "✕ Program Failed" >&2
+            echo "Executable File: $prog_c" >&2
+            return 1
+        fi
     done
 
     echo "" >> $output
@@ -30,7 +30,26 @@ ex26_8_ex () {
 
     for i in {1..5}; do
         (python3 $prog_py $mbox 2>&1) | grep "Processing Time" >> $output;
+        if [ $? -ne 0 ]; then
+            echo "✕ Program Failed" >&2
+            echo "Executable File: $prog_py" >&2
+            return 1
+        fi
     done
+
+    echo "✓ Success"
+    echo ""
+    cat $output
 
     return 0
 }
+
+if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
+    if [ $# -ne 1 ]; then
+        echo "Argument Error" >&2
+        echo "Usage: [$0] [ex Number]" >&2
+        exit 1
+    fi
+
+    ex26_8_ex $1
+fi
