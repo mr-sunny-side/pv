@@ -27,7 +27,8 @@ def print_status(line_num, cpu_time):
 
 def ext_sender(from_line):
     if from_line:
-        email = re.search(r"[\w\.-]+@[\w\.-]+", from_line)
+        # []の中では、'.'は特殊文字ではないので、\は不要
+        email = re.search(r"[\w.-]+@[\w.-]+", from_line)
         return email.group() if email else None
 
 def main():
@@ -47,7 +48,9 @@ def main():
         with open(file_name, "r") as file:
             for line in file:
                 line_num += 1
-                if line.startswith(r"^From: "):
+                # startswithは正規表現を使わない
+                # 先頭文字列を確認するだけ
+                if line.startswith("From: "):
                     email = ext_sender(line)
                     print(f"{line_num}: {email}") if email else print(f"{line_num}: Extract Failed")
     except FileNotFoundError:

@@ -51,15 +51,48 @@ mbox_ex() {
         echo "=========="
         echo "✓ Success"
         echo "executable file: $prog_name"
-        echo "mbox file: $mbox"
-        echo " > $output"
+        echo "mbox file: $(basename "$mbox")"
+        echo " > $(basename "$output")"
         echo "=========="
     else
         echo "=========="
         echo "✕ Failed"
         echo "executable file: $prog_name"
-        echo "mbox file: $mbox"
-        echo " > $output"
+        echo "mbox file: $(basename "$mbox")"
+        echo " > $(basename "$output")"
+        echo "=========="
+        return 1
+    fi
+}
+
+mbox_py_ex() {
+    if [ $# -ne 1 ]; then
+        echo "Argument Error"
+        echo "mbox_py_ex [.py file]"
+        return 1
+    fi
+
+    local prog=$1
+    local mbox=$MBOX/google.mbox
+    local prog_name=$(basename "$prog")
+    local output=$TXT_FILE/${prog_name%.*}_py.txt
+
+    python3 $prog $mbox > $output
+
+    if [ $? -eq 0 ]; then
+        echo "=========="
+        echo "✓ success"
+        echo "python file: $prog_name"
+        echo "mbox file: $(basename "$mbox")"
+        echo " > $(basename "$output")"
+        echo "=========="
+
+    else
+        echo "=========="
+        echo "✕ Failed"
+        echo "python file: $prog_name"
+        echo "mbox file: $(basename "$mbox")"
+        echo " > $(basename "$output")"
         echo "=========="
         return 1
     fi
