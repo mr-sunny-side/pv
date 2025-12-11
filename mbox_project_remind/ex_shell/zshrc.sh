@@ -43,7 +43,7 @@ mbox_ex() {
     local prog=$1
     local mbox=$MBOX/google.mbox
     local prog_name=$(basename "$prog")
-    local output=$TXT_FILE/${prog_name}.txt
+    local output=$TXT_FILE/${prog_name%.*}.txt
 
     $prog $mbox > $output
 
