@@ -1,0 +1,15 @@
+========== C result ==========
+
+Processing Time: 0.070 s
+Processing Time: 0.036 s
+Processing Time: 0.033 s
+Processing Time: 0.031 s
+Processing Time: 0.031 s
+
+========== Python result ==========
+
+Processing Time: 0.120
+Processing Time: 0.120
+Processing Time: 0.126
+Processing Time: 0.117
+Processing Time: 0.123
