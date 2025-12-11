@@ -59,8 +59,14 @@ if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
     if [ $# -ne 1 ]; then
         echo "Argument Error" >&2
         echo "Usage: [$0] [ex Number]" >&2
+
+        # exitはscriptの終了
+        # この場合、このscript全体を終了しても問題ないし必要
         exit 1
     fi
 
     ex26_8_ex $1
+
+    # 呼び出した関数の戻り値をそのまま終了ステータスとして表示
+    exit $?
 fi
