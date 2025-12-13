@@ -15,7 +15,6 @@ char	*ext_domain(const char *email) {
 	char *end = NULL;
 
 	if ((here_is_at = strchr(email, '@')) != NULL) {
-		fprintf(stderr, "here_is_at is completed\n");
 		here_is_at++;
 	}
 	else
@@ -24,8 +23,8 @@ char	*ext_domain(const char *email) {
 
 	int	interval = 0;
 	char	*domain = NULL;
-	if ((end = strchr(email, '>')) != NULL || (end = strchr(email, '\n')) != NULL) {
-		fprintf(stderr, "strchr if is completed\n");
+	// '>'か'\n'かだと、ext_senderプロセスで'>'はないし、python側でstrip()するので条件にあたらない
+	if ((end = strchr(email, '\n')) != NULL || (end = strchr(email, '\0')) != NULL) {
 		interval = end - here_is_at;
 		domain = malloc(interval + 1);
 		if (domain == NULL)
@@ -33,7 +32,6 @@ char	*ext_domain(const char *email) {
 
 		strncpy(domain, here_is_at, interval);
 		domain[interval] = '\0';
-		fprintf(stderr, "domain is returned\n");
 		return domain;
 	}
 
@@ -43,20 +41,4 @@ char	*ext_domain(const char *email) {
 
 void	free_memory(char *str) {
 	free(str);
-}
-
-
-int	main(int argc, char **argv) {
-	if (argc != 2) {
-		fprintf(stderr, "Argument Error\n");
-		return 1;
-	}
-
-	const char	*test = argv[1];
-	char		*result = ext_domain(test);
-
-	printf("%s", result);
-	free(result);
-
-	return 0;
 }
