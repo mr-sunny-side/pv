@@ -12,6 +12,10 @@
 
 	※ex26_8_8.cのロジックエラーがしっくりこなかったので、復習も兼ねる
 
+	1. ネストが深すぎてエラーを見つけるのが困難なので、linuxスタイルの書き方を学ぶ
+	2. 関数ロジック自体に問題はなさそうなので、python側の最適化をする
+		- 正直、関数を全部これにまとめてctypesでいいかも
+
 */
 
 int	ext_email_and_copy(char *from_line, char **email) {
@@ -43,8 +47,24 @@ int	ext_email_and_copy(char *from_line, char **email) {
 	return 0;
 }
 
-char	*ext_domain(const char	*email) {
+char	*ext_domain(char *email) {
 
+	char	*here_is_at = NULL;
+
+	if ((here_is_at = strchr(email, '@')) != NULL)
+		here_is_at++;
+	else {
+		fprintf(stderr, "There is no '@'\n");
+		return NULL;
+	}
+
+	int	domain_len = strlen(here_is_at);
+	char	*result = malloc(domain_len + 1);
+	if (result == NULL)
+		return NULL;
+
+	strcpy(result, here_is_at);
+	return result;
 }
 
 int	main(int argc, char **argv) {
@@ -59,11 +79,55 @@ int	main(int argc, char **argv) {
 		return 0;
 	}
 
-	const char	*file_name = argv[1];
+	char	*file_name = argv[1];
 	FILE		*fp = fopen(file_name, "r");
 	if (fp == NULL) {
 		fprintf(stderr, "Cannot Open File %s\n", file_name);
+		// 既にファイルが開けていないのでfcloseはいらない
 		return 1;
 	}
 
+
+	char		buffer[BUFFER_SIZE];
+	char		*email = NULL;
+	char		*domain = NULL;
+	int		result = 0;
+	while (fgets(buffer, sizeof(buffer), fp) != NULL) {
+		if (strncmp(buffer, SEARCH_PREFIX, PREFIX_LEN) == 0) {
+			result = ext_email_and_copy(buffer, &email);
+			if (result == -1) {
+				fprintf(stderr, "Cannot extract email\n");
+				return -1;
+			} else if (result == 1) {
+				fprintf(stderr, "ext_sender: Memory Allocation Incomplete\n");
+				fclose(fp);
+				return 1;
+			// @があるかチェックしたうえでext_domainに渡す
+			} else if (strchr(email, '@') != NULL) {
+				domain = ext_domain(email);
+				if (domain == NULL) {
+					fprintf(stderr, "ext_domain: Returned NULL\n");
+					free(email);
+					fclose(fp);
+					return 1;
+				}
+				printf("%s\n", domain);
+				free(email);
+				free(domain);
+			// ext_senderが真で@がないなら、そのままemailを出力
+			} else {
+				printf("%s\n", email);
+				free(email);
+			}
+			domain = NULL;
+			email = NULL;
+
+		}
+	}
+
+	fclose(fp);
+	return 0;
 }
+
+// まずconstのせいで死ぬほどややこしいので使わないことにした
+// 作成した結果、@の有無でエラーは起きなかった
