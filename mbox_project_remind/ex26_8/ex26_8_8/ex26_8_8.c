@@ -26,8 +26,8 @@ char	*ext_domain(const char *email) {
 		return NULL;
 
 	//ドメイン終端は必ず\0なので、strncpyの必要なし
+	// \0の代入のも必要ない
 	strcpy(domain, here_is_at);
-	domain[domain_len] = '\0';
 	return domain;
 }
 
