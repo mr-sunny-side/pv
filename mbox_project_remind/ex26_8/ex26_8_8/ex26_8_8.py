@@ -73,9 +73,12 @@ def main():
         for email in email_list:
             if b'@' in email:
                 domain = lib.ext_domain(email)
-                print(f"{email.decode():<45} -> {domain.decode():>50}") if domain else None
-                lib.free_memory(domain)
-            else:
+                print(f"{email.decode():<45} -> {domain.decode():>30}") if domain else None
+
+                # freeは定義後出ないとcrashする
+                if domain:
+                    lib.free_memory(domain)
+            elif email:
                 decoded_email = safe_decode(email.decode())
                 print(decoded_email)
 
