@@ -12,7 +12,7 @@ pythonと共有するドメイン抽出関数を書く
 //pythonから呼び出されるから、シンプルに引数の文字列からdomainを抽出し、それを返す関数
 char	*ext_domain(const char *email) {
 	char *here_is_at = NULL;
-	char *end;
+	char *end = NULL;
 
 	if ((here_is_at = strchr(email, '@')) != NULL)
 		here_is_at++;
