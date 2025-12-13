@@ -12,7 +12,6 @@ pythonと共有するドメイン抽出関数を書く
 //pythonから呼び出されるから、シンプルに引数の文字列からdomainを抽出し、それを返す関数
 char	*ext_domain(const char *email) {
 	char *here_is_at = NULL;
-	char *end = NULL;
 
 	if ((here_is_at = strchr(email, '@')) != NULL) {
 		here_is_at++;
@@ -20,23 +19,16 @@ char	*ext_domain(const char *email) {
 	else
 		return NULL;
 
+	// pythonでstrip().split(b'\n')した後にどのような形になるかを考える
+	int	domain_len = strlen(here_is_at);
+	char	*domain = malloc(domain_len + 1);
+	if (domain == NULL)
+		return NULL;
 
-	int	interval = 0;
-	char	*domain = NULL;
-	// '>'か'\n'かだと、ext_senderプロセスで'>'はないし、python側でstrip()するので条件にあたらない
-	if ((end = strchr(email, '\n')) != NULL || (end = strchr(email, '\0')) != NULL) {
-		interval = end - here_is_at;
-		domain = malloc(interval + 1);
-		if (domain == NULL)
-			return NULL;
-
-		strncpy(domain, here_is_at, interval);
-		domain[interval] = '\0';
-		return domain;
-	}
-
-	return NULL;
-
+	//ドメイン終端は必ず\0なので、strncpyの必要なし
+	strcpy(domain, here_is_at);
+	domain[domain_len] = '\0';
+	return domain;
 }
 
 void	free_memory(char *str) {
