@@ -58,7 +58,8 @@ def main():
             print(f"Unexpected Error in subprocess: {e}", file=sys.stderr)
             return 1
 
-        email_list = result.stdout.strip().split('\n')
+        # 今回はbytes型でもらうので、bを記述
+        email_list = result.stdout.strip().split(b'\n')
 
         # .cを明確に示し、共有ライブラリを開く
         lib = ctypes.CDLL(ext_domain_file)
