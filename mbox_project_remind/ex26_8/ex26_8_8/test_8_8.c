@@ -14,7 +14,8 @@
 
 	1. ネストが深すぎてエラーを見つけるのが困難なので、linuxスタイルの書き方を学ぶ
 	2. 関数ロジック自体に問題はなさそうなので、python側の最適化をする
-		- 正直、関数を全部これにまとめてctypesでいいかも
+		- 原因はext_senderを仲介することで、email文字列の末尾が想定と違ったこと
+		- なので、ext_domainだけで動作するように書き直す or 動作を修正
 
 */
 
@@ -54,7 +55,6 @@ char	*ext_domain(char *email) {
 	if ((here_is_at = strchr(email, '@')) != NULL)
 		here_is_at++;
 	else {
-		fprintf(stderr, "There is no '@'\n");
 		return NULL;
 	}
 

@@ -1,4 +1,5 @@
 import subprocess
+import ctypes
 import sys
 from email.header import decode_header
 
@@ -11,13 +12,37 @@ from email.header import decode_header
 
 """
 
+def safe_decode(raw_line):
+    if raw_line:
+        parts = []
+        try:
+            unpacked = decode_header(raw_line)
+            for data, encoding in unpacked:
+                if isinstance(data, bytes):
+                    decoded = data.decode(encoding or 'utf-8')
+                else:
+                    decoded = data
+                parts.append(decoded)
+            result = ''.join(parts)
+            return result
+        except UnicodeDecodeError as e:
+            print(f"Decoding Error: {e}", file=sys.stderr)
+            return None
+        except TypeError as e:
+            print(f"Decoding Error: {e}", file=sys.stderr)
+            return None
+        except Exception as e:
+            print(f"Decoding Error: {e}", file=sys.stderr)
+            return None
+
 def main():
-    if len(sys.argv) != 3:
-        print(f"[{sys.argv[0]}] [ext_sender] [.mbox]", file=sys.stderr)
+    if len(sys.argv) != 4:
+        print(f"[This.py] [ext_sender_file] [ext_domain.so] [.mbox]", file=sys.stderr)
         return 1
 
     ext_sender_file = sys.argv[1]
-    mbox = sys.argv[2]
+    ext_domain_so = sys.argv[2]
+    mbox = sys.argv[3]
 
     try:
         result = subprocess.run(
@@ -31,13 +56,41 @@ def main():
     except FileNotFoundError as e:
         print(e)
         return 1
+    except Exception as e:
+        print(e)
+        return 1
 
     sender_list = result.stdout.strip().split(b'\n')
 
+    lib = ctypes.CDLL(ext_domain_so)
+    lib.ext_domain.argtypes = [ctypes.c_char_p]
+    lib.ext_domain.restype = ctypes.c_char_p
+    lib.free_memory.argtypes = [ctypes.c_char_p]
+    lib.free_memory.restype = None
 
-    for email in sender_list:
-        if b'@' in email:
-            print(email.decode())
+    for raw_email in sender_list:
+        if raw_email and b'@' not in raw_email:
+            email = raw_email.decode()
+            decode_sender = safe_decode(email)
+            # このターンを終わらせるときは必ずcontinueを付ける
+            if decode_sender:
+                print(decode_sender)
+                continue
+            else:
+                continue
+        elif raw_email is None or raw_email == b'':
+            continue
+
+        raw_domain = lib.ext_domain(raw_email)
+        email = raw_email.decode()
+        if raw_domain:
+            domain = raw_domain.decode()
+            print(f"{email:<40}->{domain:>40}")
+            lib.free_memory(raw_domain)
+        else:
+            print(f"ext_domain returned NULL: {email},", file=sys.stderr)
+            return 1
+
 
     return 0
 
