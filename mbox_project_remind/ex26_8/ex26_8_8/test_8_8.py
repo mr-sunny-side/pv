@@ -48,7 +48,7 @@ def safe_ext_domain(lib, raw_email):
             return ctypes.string_at(raw_domain_p).decode(), raw_domain_p
         except Exception as e:
             print(e)
-            return None
+            return None, None
 
 def main():
     if len(sys.argv) != 4:
@@ -87,6 +87,7 @@ def main():
     lib.free_memory.restype = None
 
     for raw_email in sender_list:
+        raw_email.strip() # キャリッジターンが混入するので消す
         if raw_email and b'@' not in raw_email:
             email = raw_email.decode()
             decode_sender = safe_decode(email)
