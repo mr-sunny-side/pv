@@ -78,8 +78,13 @@ def main():
     sender_list = result.stdout.strip().split(b'\n')
 
     lib = ctypes.CDLL(ext_domain_so)
-    # 戻り値の文字列のポインタを保持し、後でfreeする必要がある
-    # そのため、ポインタを受け取るc_void_pでなければならない
+
+    """
+    戻り値の文字列のポインタを保持し、後でfreeする必要がある
+    そのため、ポインタを受け取るc_void_pでなければならない
+
+    """
+
     lib.ext_domain.argtypes = [ctypes.c_char_p]
     lib.ext_domain.restype = ctypes.c_void_p
     # free_memoryも同様の理由でc_void_p
@@ -87,7 +92,14 @@ def main():
     lib.free_memory.restype = None
 
     for raw_email in sender_list:
-        raw_email.strip() # キャリッジターンが混入するので消す
+
+        """
+        キャリッジターンが混入するので消す
+        decode_headerをする際に、特殊文字の混入で文字化けが起こる
+
+        """
+
+        raw_email = raw_email.strip()
         if raw_email and b'@' not in raw_email:
             email = raw_email.decode()
             decode_sender = safe_decode(email)
