@@ -17,9 +17,10 @@ alias c_valling='valgrind --leak-check=full --show-leak-kinds=all --track-origin
 export MBOX_PROJECT="$HOME/pv/mbox_project_remind"
 
 # プロジェクト内のディレクトリ
-export C_FILE="$MBOX_PROJECT/test_case/out"
-export TXT_FILE="$MBOX_PROJECT/test_case/txt"
-export MBOX="$MBOX_PROJECT/mbox"
+export C_FILE="$MBOX_PROJECT/_test_case/out"
+export T_FILE="$MBOX_PROJECT/_test_case/txt"
+export M_FILE="$MBOX_PROJECT/_mbox"
+export BIN_FILE="$MBOX_PROJECT/_bin"
 
 # ======================================
 # 外部ツールのパス設定
@@ -41,9 +42,9 @@ mbox_ex() {
     fi
 
     local prog=$1
-    local mbox=$MBOX/google.mbox
+    local mbox=$M_FILE/google.mbox
     local prog_name=$(basename "$prog")
-    local output=$TXT_FILE/${prog_name%.*}.txt
+    local output=$T_FILE/${prog_name%.*}.txt
 
     $prog $mbox > $output
 
@@ -73,9 +74,9 @@ mbox_py_ex() {
     fi
 
     local prog=$1
-    local mbox=$MBOX/google.mbox
+    local mbox=$M_FILE/google.mbox
     local prog_name=$(basename "$prog")
-    local output=$TXT_FILE/${prog_name%.*}_py.txt
+    local output=$T_FILE/${prog_name%.*}_py.txt
 
     python3 $prog $mbox > $output
 
