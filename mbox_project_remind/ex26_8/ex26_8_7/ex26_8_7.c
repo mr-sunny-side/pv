@@ -60,8 +60,11 @@ int	main(int argc, char **argv) {
 		if (strncmp(buffer, SEARCH_PREFIX, PREFIX_LEN) == 0) {
 
 			int	result = ext_email_and_copy(buffer, &email);
-			if (result == -1)
+			if (result == -1) {
 				fprintf(stderr, "Cannot Extract Email\n");
+				// この場合emailは未定義なのでターンを飛ばす
+				continue;
+			}
 			else if (result == 1) {
 				fprintf(stderr, "Memory Allocation Incomplete\n");
 				free(email);

@@ -35,6 +35,21 @@ def safe_decode(raw_line):
             print(f"Decoding Error: {e}", file=sys.stderr)
             return None
 
+def safe_ext_domain(lib, raw_email):
+    if raw_email:
+        """
+        1. ext_domainの戻り値として抽出されたドメイン文字列のポインタを受け取る
+        2. ctypes.string_at()でポインタ文字列として解釈し、bytes型に変換
+        3. decode()してstr型に変換し、return
+
+        """
+        try:
+            raw_domain_p = lib.ext_domain(raw_email)
+            return ctypes.string_at(raw_domain_p).decode(), raw_domain_p
+        except Exception as e:
+            print(e)
+            return None
+
 def main():
     if len(sys.argv) != 4:
         print(f"[This.py] [ext_sender_file] [ext_domain.so] [.mbox]", file=sys.stderr)
@@ -63,9 +78,12 @@ def main():
     sender_list = result.stdout.strip().split(b'\n')
 
     lib = ctypes.CDLL(ext_domain_so)
+    # 戻り値の文字列のポインタを保持し、後でfreeする必要がある
+    # そのため、ポインタを受け取るc_void_pでなければならない
     lib.ext_domain.argtypes = [ctypes.c_char_p]
-    lib.ext_domain.restype = ctypes.c_char_p
-    lib.free_memory.argtypes = [ctypes.c_char_p]
+    lib.ext_domain.restype = ctypes.c_void_p
+    # free_memoryも同様の理由でc_void_p
+    lib.free_memory.argtypes = [ctypes.c_void_p]
     lib.free_memory.restype = None
 
     for raw_email in sender_list:
@@ -81,14 +99,14 @@ def main():
         elif raw_email is None or raw_email == b'':
             continue
 
-        raw_domain = lib.ext_domain(raw_email)
+        # freeする対象であるdomainのポインタも受け取る
+        domain, raw_domain_p = safe_ext_domain(lib, raw_email)
         email = raw_email.decode()
-        if raw_domain:
-            domain = raw_domain.decode()
-            print(f"{email:<40}->{domain:>40}")
-            lib.free_memory(raw_domain)
+        if raw_domain_p and domain:
+            print(f"{email:<50}->{domain:>40}")
+            lib.free_memory(raw_domain_p)
         else:
-            print(f"ext_domain returned NULL: {email},", file=sys.stderr)
+            print(f"ext_domain Incomplete: {email},", file=sys.stderr)
             return 1
 
 
