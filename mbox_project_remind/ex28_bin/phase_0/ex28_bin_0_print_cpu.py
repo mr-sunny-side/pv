@@ -4,7 +4,7 @@ import sys
 def split_line(model_line):
     if model_line:
         try:
-            cpu_name = model_line.split(':')[1]
+            cpu_name = model_line.split(':')[1].strip()
             return cpu_name if cpu_name else None
         except IndexError as e:
             print(e, file=sys.stderr)
@@ -15,7 +15,7 @@ def split_line(model_line):
 
 with open('/proc/cpuinfo', 'r') as file:
     for line in file:
-        line.strip()
+        line = line.strip()
         if line.startswith("model name"):
             result = split_line(line)
             print(result) if result else print(f"Cannot split {line}", file=sys.stderr)

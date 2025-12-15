@@ -6,7 +6,7 @@ import subprocess
 def split_line(model_line):
     if model_line:
         try:
-            cpu_name = model_line.split(':')[1]
+            cpu_name = model_line.split(':')[1].strip()
             return cpu_name if cpu_name else None
         except IndexError as e:
             print(e, file=sys.stderr)
@@ -35,7 +35,7 @@ def main():
     cpu_info = result.stdout.strip().split('\n')
 
     for info in cpu_info:
-        info.strip()
+        info = info.strip()
         if info.startswith('model name'):
             result = split_line(info)
             print(result) if result else print(f"Cannot split {info}", file=sys.stderr)
