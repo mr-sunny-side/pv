@@ -22,7 +22,8 @@ def main():
     disk_used = usage.used
     disk_free = usage.free
 
-    print(f"{'total':<10}{b_to_gb(disk_total):>10}")
+    # マクロと表示用の関数を作ることで、毎回:<10と書かなくてよくなる
+    print(f"{'total:':<10}{b_to_gb(disk_total):>10}")
     print(f"{'used:':<10}{b_to_gb(disk_used):>10}")
     print(f"{'free:':<10}{b_to_gb(disk_free):>10}")
     return 0
