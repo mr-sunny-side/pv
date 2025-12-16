@@ -34,6 +34,7 @@ def main():
                 print(f"{'siblings:':<25}{logical_cores}")
             else:
                 print("Cannot find lines", file=sys.stderr)
+                return 1
 
     except FileNotFoundError as e:
         print(e)
