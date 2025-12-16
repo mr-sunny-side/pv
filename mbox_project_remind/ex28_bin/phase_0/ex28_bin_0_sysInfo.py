@@ -5,6 +5,8 @@ L_WIDTH = 50
 R_WIDTH = 50
 
 """
+    12-16: 次から積極的にクラスを利用する事
+
     /cpuinfo
         - model name
         - cpu cores
@@ -109,7 +111,7 @@ def print_format(title, label, value):
     if title:
         title = f"{title.center(100, "=")}"
         print(title)
-    if isinstance(value, float): # str -> int -> / 1024でfloatになってるので条件はfloat
+    if isinstance(value, (int, float)): # str -> int -> / 1024でfloatになってるので条件はfloatと保険でint
         # GBが飛び出すが、f-stringのネストは面倒すぎるので無視
         print(f"{label + ':':<{L_WIDTH}}{value:>{R_WIDTH}.1f} GB") # フォーマット指定の順序: {値:埋め文字 寄せ方向 幅.精度 型}
     else:
@@ -174,7 +176,7 @@ def main():
         else:
             print("Disk Free Info is Incomplete", file=sys.stderr)
         return 0
-    except FileExistsError as e:
+    except FileNotFoundError as e:
         print(e, file=sys.stderr)
         return 1
     except IndexError as e:
