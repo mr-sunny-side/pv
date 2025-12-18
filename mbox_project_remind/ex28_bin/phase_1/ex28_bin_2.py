@@ -75,7 +75,7 @@ def main():
 
             # 標準出力
             title = ' BMP Header Information '
-            print_result(title, 'File Type' , str(signature))
+            print_result(title, 'File Type' , signature.decode()) # b'BM'はbytes型、他の数字はint型
 
             file_size_kb = f"{int(file_size) / 1024:.1f}"
             print_result(None, 'File Size', f"{str(file_size) + ' bytes (' + str(file_size_kb) + ' KB)'}")
