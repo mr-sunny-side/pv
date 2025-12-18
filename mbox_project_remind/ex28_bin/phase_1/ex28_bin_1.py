@@ -13,7 +13,7 @@ def print_byte(byte_line):
 def print_ascii(byte_line):
     if byte_line:
         for byte in byte_line:
-            print(f"{chr(byte)}", end='') if 0x20 <= byte <= 0x7f else print('.', end='')
+            print(f"{chr(byte)}", end='') if 0x20 <= byte <= 0x7e else print('.', end='')
 
 # 型指定との衝突を避けるため、シンボルはbyteで統一
 def main():
