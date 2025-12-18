@@ -46,7 +46,7 @@ def main():
 
     try:
         with open(file_name, 'rb') as f:
-            f.seek(0) # ファイルのアドレスを指定のbyteに合わせる関数？
+
             file_header = f.read(14)
 
             # char*2, 符号なし4byte, 4byteスキップ、符号なし4byte
@@ -77,13 +77,18 @@ def main():
             title = ' BMP Header Information '
             print_result(title, 'File Type' , signature.decode()) # b'BM'はbytes型、他の数字はint型
 
+            # structはint型を返すのでstr()は不要
             file_size_kb = f"{int(file_size) / 1024:.1f}"
-            print_result(None, 'File Size', f"{str(file_size) + ' bytes (' + str(file_size_kb) + ' KB)'}")
-            print_result(None, 'Imagine Offset', f"{str(img_offset) + ' bytes'}")
-            print_result(None, 'Imagine Width', f"{str(img_width) + ' pixels'}")
-            print_result(None, 'Imagine Width', f"{str(img_hight) + ' pixels'}")
-            print_result(None, 'Bit Depth', f"{str(bit_depth) + ' bits'}")
-            print_result(None, 'Compression', f"{str(compression)}")
+            print_result(None, 'File Size', f"{file_size} bytes ({file_size_kb} KB)")
+            print_result(None, 'Image Offset', f"{img_offset} bytes")
+            print_result(None, 'Image Width', f"{img_width} pixels")
+            print_result(None, 'Image Width', f"{img_hight} pixels")
+            print_result(None, 'Bit Depth', f"{bit_depth} bits")
+
+            if compression == 0:
+                print_result(None, 'Compression', 'None (0)')
+            else:
+                print_result(None, 'Compression', compression")
             print()
 
             return 0
