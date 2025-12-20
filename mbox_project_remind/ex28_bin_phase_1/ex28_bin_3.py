@@ -1,8 +1,8 @@
 import sys
 import struct
 
-L_WIDTH = 15
-R_WIDTH = 15
+L_WIDTH = 20
+R_WIDTH = 20
 
 def read_bmp(file_name):
     try:
@@ -15,7 +15,8 @@ def read_bmp(file_name):
             if file_type != b'BM':
                 return None
 
-            info_header = f.read(40)
+            # 必要分だけreadするとerrorにならない
+            info_header = f.read(20)
             width, hight, planes, depth, compression = \
                 struct.unpack('<xxxxiiHHI', info_header)
             if planes != 0x01:
