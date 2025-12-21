@@ -5,10 +5,6 @@
 
 /*
 	### 12-21: ロジックエラー修正
-
-	1. create_sample_bmp3.pyでテストようの完全アシンメトリーファイルを作成
-	2. 上記ファイルで当実行ファイルをテストし、ロジックエラーを見つける
-
 */
 
 #pragma pack(push, 1)
@@ -152,8 +148,8 @@ int	main(int argc, char **argv) {
 		return 0;
 	}
 
-	int	x = atoi(argv[3]);
-	int	y = atoi(argv[4]);
+	int	x = atoi(argv[2]);
+	int	y = atoi(argv[3]);
 	Pixel	px;
 	result = get_pixels(fp, &fh, &ih, x, y, &px);
 	if (result != 0) {
@@ -176,10 +172,10 @@ int	main(int argc, char **argv) {
 	  Blue:  255 (0xFF)
 	*/
 
-	printf("Pixel at (%d, %d):", x, y);
-	printf("	Red: %3d (%02x)", px.red, px.red);
-	printf("	Green: %3d (%02x)", px.green, px.green);
-	printf("	Blue: %3d (%02x)", px.blue, px.blue);
+	printf("Pixel at (%d, %d):\n", x, y);
+	printf("  Red:%10d (0x%02X)\n", px.red, px.red);	// 後ろの16進数の文字数を揃え、labelの文字数で調整している
+	printf("  Green:%8d (0x%02X)\n", px.green, px.green);
+	printf("  Blue:%9d (0x%02X)\n", px.blue, px.blue);
 
 	fclose(fp);
 	return 0;
