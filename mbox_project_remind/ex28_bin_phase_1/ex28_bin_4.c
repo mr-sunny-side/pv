@@ -69,7 +69,7 @@ int	get_pixels(FILE *fp, const BmpFileHeader *fh, const BmpInfoHeader *ih,
 
 
 	// Pixel構造体にBGRデータをバッファ
-	if (fread(px, sizeof(px), 1, fp) != 1)
+	if (fread(px, sizeof(*px), 1, fp) != 1)		// pxはポインタとして持っているので、sizeof(*px)でないとポインタ数列のサイズになってしまう
 		return 1;
 
 	return 0;
