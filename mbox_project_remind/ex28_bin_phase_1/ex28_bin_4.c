@@ -3,7 +3,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-// 12-21: ロジックエラー修正
+/*
+	### 12-21: ロジックエラー修正
+
+	1. create_sample_bmp3.pyでテストようの完全アシンメトリーファイルを作成
+	2. 上記ファイルで当実行ファイルをテストし、ロジックエラーを見つける
+
+*/
 
 #pragma pack(push, 1)
 typedef	struct {
@@ -89,7 +95,7 @@ int	print_all_pixels(FILE *fp, const BmpFileHeader *fh, const BmpInfoHeader *ih)
 		for (int x = 0; x < ih->width; x++) {	// xは反転していないので0でok
 			if ((result = get_pixels(fp, fh, ih, x, y, &px)) != 0)
 				return result;
-			printf("[%d, %d, %d] ", px.blue, px.green, px.red);
+			printf("[%d, %d, %d] ", px.red, px.green, px.blue);
 		}
 		printf("\n");
 	}
@@ -152,6 +158,7 @@ int	main(int argc, char **argv) {
 	result = get_pixels(fp, &fh, &ih, x, y, &px);
 	if (result != 0) {
 		fprintf(stderr, "get_pixels: returned error\n");
+		fclose(fp);
 		return result;
 	}
 
@@ -174,5 +181,6 @@ int	main(int argc, char **argv) {
 	printf("	Green: %3d (%02x)", px.green, px.green);
 	printf("	Blue: %3d (%02x)", px.blue, px.blue);
 
+	fclose(fp);
 	return 0;
 }
