@@ -48,7 +48,7 @@ int	get_pixels(FILE *fp, BmpFileHeader *fh, BmpInfoHeader *ih, int x, int y,Pixe
 
 int	turn_to_gray(FILE *fp, BmpFileHeader *fh, BmpInfoHeader *ih, Pixel *px) {
 
-	// 引数のpxをグレースケールにしてreturn
+	// 引数のpxをグレースケールにして可否をreturn
 	// ループはmainでやる
 
 	/* 輝度 = 0.299 * R + 0.587 * G + 0.114 * B */
