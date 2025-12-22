@@ -49,7 +49,7 @@ int	get_pixels(FILE *fp, BmpFileHeader *fh, BmpInfoHeader *ih, int x, int y,Pixe
 int	turn_to_gray(FILE *fp, BmpFileHeader *fh, BmpInfoHeader *ih, Pixel *px) {
 
 	// 引数のpxをグレースケールにして可否をreturn
-	// ループはmainでやる
+	// mainでループ -> get_pixels -> turn_to_gray -> 何らかの形で保存 or 毎回書き込み(fopenだったらバッファするからいいか？)
 
 	/* 輝度 = 0.299 * R + 0.587 * G + 0.114 * B */
 }
@@ -87,5 +87,5 @@ int	main(int argc, char **argv) {
 		return 1;
 	}
 
-	// get_pixels
+	// ループ
 }
