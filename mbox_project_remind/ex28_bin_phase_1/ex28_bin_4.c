@@ -125,7 +125,7 @@ int	main(int argc, char **argv) {
 	}
 
 
-	if (fh.file_type != 0x4d42) {	//
+	if (fh.file_type != 0x4d42) {
 		fprintf(stderr, "File type is not .bmp");
 		fclose(fp);
 		return -1;
