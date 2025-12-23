@@ -3,13 +3,14 @@
 #include <stdint.h>
 #include <string.h>
 
+// 後でヘッダー情報を書き込むので、今回は正確にすべて記述する
 #pragma pack(push, 1)
 typedef	struct {
 	uint16_t	file_type;
 	uint32_t	file_size;
 	uint16_t	reserved_1;
 	uint16_t	reserved_2;
-	uint16_t	pixel_offset;
+	uint32_t	pixel_offset;
 } BmpFileHeader;
 
 typedef	struct {
@@ -19,14 +20,19 @@ typedef	struct {
 	uint16_t	planes;
 	uint16_t	bit_depth;
 	uint32_t	compression;
-	// 省略
+	uint32_t	image_size;
+	uint32_t	x_pixel_per_meter;
+	uint32_t	y_pixel_per_meter;
+	uint32_t	colors_used;
+	uint32_t	colors_important;
 } BmpInfoHeader;
 #pragma pack(pop)
 
+// bmpはBGRなので、その順に沿う
 typedef	struct {
-	uint8_t	red;
-	uint8_t	green;
 	uint8_t	blue;
+	uint8_t	green;
+	uint8_t	red;
 } Pixel;
 
 // 計算部分の復習用
@@ -39,7 +45,8 @@ int	get_pixels(FILE *fp, BmpFileHeader *fh, BmpInfoHeader *ih, int x, int y,Pixe
 
 	int	bytes_per_pixel = ih->bit_depth / 8;		// 1ビットあたりのバイト数
 	int	bytes_per_line = ih->width * bytes_per_pixel;	// 一行あたりのバイト数
-	int	padding = 4 - (bytes_per_line % 4);		// 一行4バイトパディングの際、必要なパディング
+	int	padding = (4 - (bytes_per_line % 4)) % 4;	// 一行4バイトパディングの際、必要なパディング
+									// パディングが必要ない場合に=0にする為、最後に% 4が必要
 
 	int	reversed_y = ih->height - y - 1;		// bmpはyが反転しているので、その計算
 
@@ -62,13 +69,18 @@ int	get_pixels(FILE *fp, BmpFileHeader *fh, BmpInfoHeader *ih, int x, int y,Pixe
 
 void	turn_to_gray(Pixel *px) {
 
-	// 引数のpxをグレースケールにして可否をreturn
-	// mainでループ -> get_pixels -> turn_to_gray -> fwrite/mainで書き込み
-	/* 輝度 = 0.299 * R + 0.587 * G + 0.114 * B */
+	/*
+		グレースケールは各RGBに指定の数値を掛け算して、その合算が出力となる
+		この際、RGBは全て同じ値となる。詳細は当ex備忘録を参照
 
-	px->red *= 0.299;
-	px->green *= 0.587;
-	px->blue *= 0.114;
+		uint8_t gray = (uint8_t)(px->red * 0.299 + px->green * 0.587 + px->blue * 0.114);
+	*/
+
+	uint8_t	gray = (uint8_t)(px->red * 0.299 + px->green * 0.587 + px->blue * 0.114);
+
+	px->red = gray;
+	px->green = gray;
+	px->blue = gray;
 }
 
 int	main(int argc, char **argv) {
@@ -115,6 +127,19 @@ int	main(int argc, char **argv) {
 		return 1;
 	}
 
+	// pixelを書き込む前にヘッダー情報を書き込む
+	if (fwrite(&fh, sizeof(fh), 1, out_fp) != 1) {
+		fprintf(stderr, "fwrite/main: returned error\n");
+		return 1;
+	}
+
+	if(fwrite(&ih, sizeof(ih), 1, out_fp) != 1) {
+		fprintf(stderr, "fwrite/main: returned error\n");
+		return 1;
+	}
+
+	// 本当はアライメントしないとだめ
+	// なので、実際に使う時はアライメントの計算をして書きこむ
 	int	result = 0;
 	int	x = 0;
 	int	y = 0;
