@@ -147,7 +147,7 @@ int	main(int argc, char **argv) {
 	uint16_t	bit_per_sample = fmt.bit_depth * fmt.channel_num;
 	printf("Bit per sample: %u\n", bit_per_sample);
 
-	float		duration = data_size / (bit_per_sample / 8 * fmt.sample_rate);
+	float		duration = (float)data_size / (bit_per_sample / 8 * fmt.sample_rate);
 	printf("Duration: %.2f\n", duration);
 	printf("\n");
 
