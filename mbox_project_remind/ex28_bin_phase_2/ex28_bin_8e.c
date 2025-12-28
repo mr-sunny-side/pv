@@ -67,11 +67,12 @@ int	process_fread(FILE *fp, FmtChunk *fmt, TmpChunk *tmp, int *fmt_count, int *d
 			fseek(fp, skip_num, SEEK_CUR);
 			fprintf(stderr, "Unknown chunk is skiped\n");
 		}
-	}
-
-	if (memcmp(tmp->chunk_id, "data", 4) == 0) {
+	} else if (memcmp(tmp->chunk_id, "data", 4) == 0) {
 		*data_size = tmp->chunk_size;
 		*data_count = 1;
+	} else {
+		fseek(fp, tmp->chunk_size, SEEK_CUR);		// ちゃんとスキップしないとjunkデータが代入されることがある
+		fprintf(stderr, "Unkown chunk is skiped: %.4s\n", tmp->chunk_id);
 	}
 
 	return 0;
