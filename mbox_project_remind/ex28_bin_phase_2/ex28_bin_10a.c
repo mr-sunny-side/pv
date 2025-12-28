@@ -8,6 +8,16 @@
 	- dataチャンクまで読み取る
 	- サンプリング位置を記録
 	- そこからブロックアライン(一回のサンプルごとのデータ量) * 特定位置で計算
+
+	12-28: errorコード
+	```bash
+	$C_FILE/ex28_bin_10a_file $BIN_FILE/sample2_extended.wav 10
+	process_read: Cannot read the file
+	process_read/main: returned error
+	fmt: 1
+	data_size: 0
+	data_offset: 0
+	```
 */
 
 #pragma pack(push,1)
@@ -51,16 +61,18 @@ int	process_read(FILE *fp, FmtChunk *fmt, TmpChunk *tmp, int *is_fmt, int *data_
 		}
 		*is_fmt += 1;
 
-		if (fmt->chunk_size > sizeof(FmtChunk)){
-			int	skip_num = fmt->chunk_size - sizeof(FmtChunk);
+		int	skip_num = (int)(fmt->chunk_size - (uint32_t)(sizeof(FmtChunk) - 8));	//型の不整合(特に符号無しあり)によるコンパイルエラーに注意
+		if (fmt->chunk_size > (uint32_t)(sizeof(FmtChunk) - 8)){		// チャンクサイズはIDとサイズ情報(8bytes)を引いた数でなければならない
 			fseek(fp, skip_num, SEEK_CUR);
 		}
 
 	} else if (memcmp(tmp->chunk_id, "data", 4) == 0) {
-		*data_size = tmp->chunk_size;
+		*data_size = (int)tmp->chunk_size;
 		*data_offset = ftell(fp);
-	} else
-		fseek(fp, tmp->chunk_size, SEEK_CUR);
+	} else {
+		fseek(fp, (int)tmp->chunk_size, SEEK_CUR);
+		fprintf(stderr, "Unknown chunk is skipped: %.4s\n", tmp->chunk_id);
+	}
 
 	return 0;
 }
@@ -73,7 +85,7 @@ int	search_bin(FILE *fp, FmtChunk *fmt, long data_offset, int need_offset) {
 
 	fseek(fp, result_offset, SEEK_SET);
 	int	bin_data = 0;
-	if (fread(&bin_data, (bit_per_sample / 8), 1, fp) != 0) {
+	if (fread(&bin_data, (bit_per_sample / 8), 1, fp) != 1) {
 		fprintf(stderr, "search_bin: Cannot read a bin data\n");
 		return -1;
 	}
@@ -120,6 +132,7 @@ int	main(int argc, char **argv) {
 		result = process_read(fp, &fmt, &tmp, &is_fmt, &data_size, &data_offset);
 		if (result != 0) {
 			fprintf(stderr, "process_read/main: returned error\n");
+			fprintf(stderr, "fmt: %d\ndata_size: %d\ndata_offset: %ld\n", is_fmt, data_size, data_offset);
 			fclose(fp);
 			return result;
 		}
@@ -142,7 +155,8 @@ int	main(int argc, char **argv) {
 	}
 
 	printf("=== Result ===\n");
-	printf("Bin data: %0x", bin_data);
+	printf("Bin data: %0x\n", bin_data);
+	printf("\n");
 
 	fclose(fp);
 	return 0;

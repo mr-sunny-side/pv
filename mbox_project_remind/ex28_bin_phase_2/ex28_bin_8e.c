@@ -62,8 +62,8 @@ int	process_fread(FILE *fp, FmtChunk *fmt, TmpChunk *tmp, int *fmt_count, int *d
 			return 1;
 		*fmt_count = 1;
 
-		int	skip_num = fmt->chunk_size - sizeof(FmtChunk);
-		if (fmt->chunk_size > sizeof(FmtChunk)) {
+		int	skip_num = fmt->chunk_size - (sizeof(FmtChunk) - 8);
+		if (fmt->chunk_size > sizeof(FmtChunk) - 8) {
 			fseek(fp, skip_num, SEEK_CUR);
 			fprintf(stderr, "Unknown chunk is skiped\n");
 		}
