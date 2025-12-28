@@ -4,6 +4,14 @@ import struct
 
 """
     12-27: 関数内のfmt_countは記述として正しいか確認する
+    12-28: sample2.wavでのエラー原因を特定する
+
+            ```bash
+            ./ex28_bin_9b.py $BIN_FILE/sample2.wav
+                Error: Cannot read file
+                process_read: returned None
+            ```
+
 
     fmt, dataを見つけて情報を出力する
 
@@ -26,23 +34,36 @@ def process_read(f):
     # 発見したチャンクのカウントはmainで行う （数値はイミュータブル・スコープの問題）
     # 不明なチャンクの場合chunk_id = None, errorの場合Noneを返す
 
-    tmp = f.read(12) if f else None
+    tmp = f.read(8) if f else None
 
-    if tmp is None or len(tmp) != 12:
+    if tmp is None or len(tmp) != 8:
         print("Error: Cannot read file", file=sys.stderr)
         return None
 
-    tmp_id, tmp_size, tmp_format = struct.unpack('<4sI4s', tmp)
+    tmp_id, tmp_size = struct.unpack('<4sI', tmp)
 
     # バイト型なのかstr型なのかを意識する
-    if tmp_id == b'RIFF' and tmp_format == b'WAVE':   # チャンクが短いのでそのままreturn
-        return {
-            'chunk_id': tmp_id.decode('ascii'),
-            'chunk_size': tmp_size,
-            'format': tmp_format.decode('ascii')
-        }
+    if tmp_id == b'RIFF':   # チャンクが短いのでそのままreturn
+        f.seek(-8, 1)
+        tmp = f.read(12)
+        if len(tmp) < 12:
+            print("Cannot read RIFF header", file=sys.stderr)
+            return None
+
+        tmp_id, tmp_size, tmp_format = struct.unpack('<4sI4s', tmp)
+        if tmp_format == b'WAVE':
+            return {
+                'chunk_id': tmp_id.decode('ascii'),
+                'chunk_size': tmp_size,
+                'format': tmp_format.decode('ascii')
+            }
+        else:
+            print(f"This file is not WAV", file=sys.stderr)
+            print(f"chunk_id: {tmp_id.decode()}")
+            print(f"format: {tmp_format.decode()}")
+            return None
     elif tmp_id == b'fmt ':
-        f.seek(-12, 1)    # チャンクの先頭に戻る
+        f.seek(-8, 1)    # チャンクの先頭に戻る
 
         fmt = f.read(24)
 
@@ -74,6 +95,7 @@ def process_read(f):
         }
     else:
         f.seek(tmp_size, 1)
+        print(f"Unknown chunk is skipped: {tmp_id.decode()}", file=sys.stderr)
         return {
             'chunk_id': 'None'
         }
@@ -93,24 +115,40 @@ def main():
 
     try:
         with open(file_name, "rb") as f:
-            fmt_count = False
-            data_count = False
+            i = 0
             while (not fmt or not data or not riff):
                 tmp = process_read(f)
+                i += 1
 
 
                 # tmp = Noneをprocess_readが返すとここでエラーが発生する
                 # 教訓 - return Noneは予期しないエラーが発生する場合がある
-                if tmp and not riff and tmp['chunk_id'] == 'RIFF' and tmp['format'] == 'WAVE' :
+                if tmp and not riff and \
+                    tmp['chunk_id'] == 'RIFF' and tmp['format'] == 'WAVE' :
+
                     riff = tmp
-                elif tmp and not fmt and tmp['chunk_id'] == 'fmt ':
+                elif tmp and not fmt and \
+                    tmp['chunk_id'] == 'fmt ':
+
                     fmt = tmp
-                elif tmp and not data and tmp['chunk_id'] == 'data' and not data:
+                elif tmp and not data and \
+                        tmp['chunk_id'] == 'data' and not data:
+
                     data = tmp
                 elif tmp and tmp['chunk_id'] == 'None':
                     continue
                 elif tmp is None:
                     print("process_read: returned None")
+                    print(f"i = {i}")
+
+                    is_riff = True if riff else False
+                    is_fmt = True if fmt else False
+                    is_data = True if data else False
+
+                    print(f"RIFF: {is_riff}")
+                    print(f"fmt : {is_fmt}")
+                    print(f"data: {is_data}")
+
                     return 1
 
         if not riff or not fmt or not data:
