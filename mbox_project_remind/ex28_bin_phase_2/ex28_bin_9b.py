@@ -24,33 +24,31 @@ import struct
 def process_read(f):
     # 呼び出されたら、カレントポインタからchunk_idを読み取り、該当するチャンク情報を返す
     # 発見したチャンクのカウントはmainで行う （数値はイミュータブル・スコープの問題）
+    # 不明なチャンクの場合chunk_id = None, errorの場合Noneを返す
 
     tmp = f.read(12) if f else None
 
     if tmp is None or len(tmp) != 12:
         print("Error: Cannot read file", file=sys.stderr)
-        return {
-            'chunk_id': 'None'
-        }
+        return None
 
     tmp_id, tmp_size, tmp_format = struct.unpack('<4sI4s', tmp)
 
-    if tmp_id == 'RIFF' and tmp_format == 'WAVE':   # チャンクが短いのでそのままreturn
+    # バイト型なのかstr型なのかを意識する
+    if tmp_id == b'RIFF' and tmp_format == b'WAVE':   # チャンクが短いのでそのままreturn
         return {
             'chunk_id': tmp_id.decode('ascii'),
             'chunk_size': tmp_size,
             'format': tmp_format.decode('ascii')
         }
-    elif tmp_id == 'fmt ':
-        f.seek(-8, 1)    # チャンクの先頭に戻る
+    elif tmp_id == b'fmt ':
+        f.seek(-12, 1)    # チャンクの先頭に戻る
 
         fmt = f.read(24)
 
         if len(fmt) < 24:
             print("Error: Cannot read fmt chunk", file=sys.stderr)
-            return {
-                'chunk_id': 'None'
-            }
+            return None
 
         chunk_id, chunk_size, audio_format, channel_num, \
             sample_rate, bytes_rate, block_align, bit_depth = struct.unpack('<4sIHHIIHH', fmt)
@@ -69,9 +67,9 @@ def process_read(f):
             'bit_depth': bit_depth
         }
 
-    elif tmp_id == 'data':  # チャンクが短いのでそのままreturn
+    elif tmp_id == b'data':  # チャンクが短いのでそのままreturn
         return {
-            'chunk_id': tmp_id,
+            'chunk_id': tmp_id.decode('ascii'),
             'chunk_size': tmp_size
         }
     else:
@@ -100,14 +98,20 @@ def main():
             while (not fmt or not data or not riff):
                 tmp = process_read(f)
 
+
                 # tmp = Noneをprocess_readが返すとここでエラーが発生する
                 # 教訓 - return Noneは予期しないエラーが発生する場合がある
-                if tmp['chunk_id'] == "RIFF" and tmp['chunk_id'] == 'WAVE' and not riff:
+                if tmp and not riff and tmp['chunk_id'] == 'RIFF' and tmp['format'] == 'WAVE' :
                     riff = tmp
-                elif tmp['chunk_id'] == "fmt " and not fmt:
+                elif tmp and not fmt and tmp['chunk_id'] == 'fmt ':
                     fmt = tmp
-                elif tmp['chunk_id'] == "data" and not data:
+                elif tmp and not data and tmp['chunk_id'] == 'data' and not data:
                     data = tmp
+                elif tmp and tmp['chunk_id'] == 'None':
+                    continue
+                elif tmp is None:
+                    print("process_read: returned None")
+                    return 1
 
         if not riff or not fmt or not data:
             print("Error: Cannot find RIFF, fmt or data", file=sys.stderr)
