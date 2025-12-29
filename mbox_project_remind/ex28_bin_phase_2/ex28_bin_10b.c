@@ -12,6 +12,8 @@
 	fread/get_bin: Cannot read bin data
 	*** stack smashing detected ***: terminated
 	zsh: IOT instruction (core dumped)  $C_FILE/ex28_bin_10b_file $BIN_FILE/sample.wav 0.5
+
+	12-29: ex28_bin_10b 備忘録を見て、get_bin関数を再設計
 	```
 */
 
