@@ -76,11 +76,12 @@ int	get_bin(FILE *fp, FmtHeader *fmt, int data_size, long data_offset, float nee
 		return -1;
 	}
 
-	int	result_offset = data_offset + (bit_per_second / 8) * need_second;
+	long	result_offset = data_offset + (long)((bit_per_second / 8) * need_second);	// 修正
 	fseek(fp, result_offset, SEEK_SET);
 
 	int	bin_data = 0;
-	if (fread(&bin_data, bit_per_sample, 1, fp) != 1) {
+	int	result_read = (int)(bit_per_sample / 8);
+	if (fread(&bin_data, result_read, 1, fp) != 1) {	// 修正
 		fprintf(stderr, "fread/get_bin: returned error\n");
 		return 1;
 	}
@@ -170,7 +171,7 @@ int	main(int argc, char **argv) {
 		return 1;
 	}
 
-	float	need_second = atoi(argv[2]);
+	float	need_second = atof(argv[2]);		// 修正
 	int	bin_data = get_bin(fp, &fmt, data_size, data_offset, need_second);
 	if (bin_data == -1 || bin_data == 1) {
 		fprintf(stderr, "get_bin/main: returned error\n");
