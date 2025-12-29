@@ -80,8 +80,8 @@ int	get_bin(FILE *fp, FmtHeader *fmt, int data_size, long data_offset, float nee
 	fseek(fp, result_offset, SEEK_SET);
 
 	int	bin_data = 0;
-	if (fread(&bin_data, bit_per_second, 1, fp) != 1) {
-		fprintf(stderr, "fread/get_bin: Cannot read bin data\n");
+	if (fread(&bin_data, bit_per_sample, 1, fp) != 1) {
+		fprintf(stderr, "fread/get_bin: returned error\n");
 		return 1;
 	}
 
