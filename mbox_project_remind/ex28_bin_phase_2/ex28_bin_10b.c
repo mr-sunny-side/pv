@@ -89,13 +89,13 @@ int	get_bin(FILE *fp, FmtHeader *fmt, int data_size, long data_offset, float nee
 		result_offset, data_offset, byte_offset);
 	if (fseek(fp, result_offset, SEEK_SET) != 0) {
 		fprintf(stderr, "fseek/get_bin: returned error\n");
-		return 1;
+		return -1;
 	}
 
 	int	bin_data = 0;
 	if (fread(&bin_data, bytes_per_sample, 1, fp) != 1) {
 		fprintf(stderr, "fread/get_bin: returned error\n");
-		return 1;
+		return -1;
 	}
 
 
@@ -192,7 +192,7 @@ int	main(int argc, char **argv) {
 	}
 
 	printf("=== Result ===\n");
-	printf("bin: %d", bin_data);
+	printf("bin: %0x", bin_data);
 	printf("\n");
 
 	fclose(fp);
