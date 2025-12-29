@@ -12,6 +12,7 @@
 	fread/get_bin: Cannot read bin data
 	*** stack smashing detected ***: terminated
 	zsh: IOT instruction (core dumped)  $C_FILE/ex28_bin_10b_file $BIN_FILE/sample.wav 0.5
+	```
 
 	12-29: ex28_bin_10b 備忘録を見て、get_bin関数を再設計
 	```
@@ -62,31 +63,41 @@ typedef	struct {
 */
 
 int	get_bin(FILE *fp, FmtHeader *fmt, int data_size, long data_offset, float need_second) {
+	// error時の戻り値は、必ず負の数にしないと正しい出力とごっちゃになる
+	// 戻り値がおかしい？？？？
 
-	float	bit_per_sample = (float)(fmt->bit_depth * fmt->channel_num);
-	float	bit_per_second = bit_per_sample * (float)fmt->sample_rate;
-	if ((uint32_t)(bit_per_second / 8) == fmt->byte_rate)
-		fprintf(stderr, "byte_rate formula is true\n");
-	else {
-		fprintf(stderr, "Error: byte_rate formula is invalid\n");
+	uint32_t	bits_per_sample = fmt->bit_depth * fmt->channel_num;
+	uint32_t	bytes_per_sample = bits_per_sample / 8;
+	uint32_t	byte_rate = fmt->byte_rate;
+	if (byte_rate != bytes_per_sample * fmt->sample_rate) {
+		fprintf(stderr, "get_bin: byte_rate formula is incorrect\n");
 		return -1;
 	}
+	fprintf(stderr, "bytes_rate formula is correct\n");
 
-	float	duration = (float)data_size / (bit_per_second / 8);
+	float	duration = (float)data_size / (float)byte_rate;
 	if (duration < need_second) {
 		fprintf(stderr, "get_bin: need_second is too big\n");
 		return -1;
 	}
 
-	long	result_offset = data_offset + (long)((bit_per_second / 8) * need_second);	// 修正
-	fseek(fp, result_offset, SEEK_SET);
+	long	byte_offset = (long)((float)byte_rate * need_second);	// 一秒ごとのバイト数 *
+	fprintf(stderr, "byte_offset(%ld) = byte_rate(%.2f) * need_second(%.2f)\n",
+			byte_offset, (float)byte_rate, need_second);
+	long	result_offset = data_offset + byte_offset;
+	fprintf(stderr, "result_offset(%ld) = data_offset(%ld) + byte_offset(%ld)\n",
+		result_offset, data_offset, byte_offset);
+	if (fseek(fp, result_offset, SEEK_SET) != 0) {
+		fprintf(stderr, "fseek/get_bin: returned error\n");
+		return 1;
+	}
 
 	int	bin_data = 0;
-	int	result_read = (int)(bit_per_sample / 8);
-	if (fread(&bin_data, result_read, 1, fp) != 1) {	// 修正
+	if (fread(&bin_data, bytes_per_sample, 1, fp) != 1) {
 		fprintf(stderr, "fread/get_bin: returned error\n");
 		return 1;
 	}
+
 
 	return bin_data;
 }
@@ -175,7 +186,7 @@ int	main(int argc, char **argv) {
 
 	float	need_second = atof(argv[2]);		// 修正
 	int	bin_data = get_bin(fp, &fmt, data_size, data_offset, need_second);
-	if (bin_data == -1 || bin_data == 1) {
+	if (bin_data == -1) {
 		fprintf(stderr, "get_bin/main: returned error\n");
 		return result;
 	}
