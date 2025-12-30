@@ -14,8 +14,9 @@
 	zsh: IOT instruction (core dumped)  $C_FILE/ex28_bin_10b_file $BIN_FILE/sample.wav 0.5
 	```
 
-	12-29: ex28_bin_10b 備忘録を見て、get_bin関数を再設計
-		##追加調査 を参照
+	12-29:	- ソースコードが正しいことが判明。ただ重要な学びが幾つもあったので備忘録を軽く読むこと
+		- 10cでわからないことがあったらとりあえず読むことを進める
+
 	```
 */
 
@@ -64,8 +65,6 @@ typedef	struct {
 */
 
 int	get_bin(FILE *fp, FmtHeader *fmt, int data_size, long data_offset, float need_second) {
-	// error時の戻り値は、必ず負の数にしないと正しい出力とごっちゃになる
-	// 戻り値がおかしい？？？？
 
 	uint32_t	bits_per_sample = fmt->bit_depth * fmt->channel_num;
 	uint32_t	bytes_per_sample = bits_per_sample / 8;
