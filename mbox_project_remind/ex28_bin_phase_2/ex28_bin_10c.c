@@ -8,6 +8,8 @@
 	1. コマンドライン引数で開始時刻と終了時刻を指定
 	2. その範囲のサンプルを表示
 	3. 最大表示数を制限（例: 20サンプル）
+
+	12-30: コードを修正
 */
 
 #pragma pack(push, 1)
@@ -130,6 +132,7 @@ int	print_bin(FILE *fp, const FmtChunk *fmt, uint32_t data_size, long data_offse
 	if (duration < end_time) {
 		fprintf(stderr, "ERROR print_bin Argument is invalid\n");
 		fprintf(stderr, "Duration: %.3f end_time: %.3f\n", duration, end_time);
+		return -1;
 	}
 
 	if (fmt->byte_rate != bytes_per_second) {					//学習用の計算の正誤確認
@@ -149,9 +152,9 @@ int	print_bin(FILE *fp, const FmtChunk *fmt, uint32_t data_size, long data_offse
 
 	int	i = 0;							// 一行16個のバイナリを表示するためのidx
 	long	print_offset = start_offset;				// print_offsetは今読んでいるoffsetを左に表示するために使う
-	int	sample = 0;
+	long	sample = 0;
 
-	if (fseek(fp, data_offset, SEEK_SET) != 0) {
+	if (fseek(fp, start_offset, SEEK_SET) != 0) {			// start_offsetに移動
 		fprintf(stderr, "ERROR fseek/print_bin Cannot seek data offset\n");
 		return -1;
 	}
@@ -161,7 +164,7 @@ int	print_bin(FILE *fp, const FmtChunk *fmt, uint32_t data_size, long data_offse
 	while (end_offset > print_offset) {
 		printf("%08lx ", print_offset); // 16進数のデータオフセットを左に表示
 		i = 0;
-		while (16 > i && end_offset >= print_offset) {
+		while (16 > i && end_offset > print_offset) {
 			/*
 				1. サンプルごとにバイナリを取得
 				2. printf
@@ -171,7 +174,7 @@ int	print_bin(FILE *fp, const FmtChunk *fmt, uint32_t data_size, long data_offse
 				fprintf(stderr, "ERROR fread/print_bin: Cannot read sample data\n");
 				return -1;
 			}
-			printf("%02x ", sample);
+			printf("%02lx ", sample);
 			i++;
 			print_offset += bytes_per_sample;
 		}
