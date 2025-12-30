@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
 
 /*
 	**要件**:
@@ -91,8 +92,8 @@ int	process_read(FILE *fp, FmtChunk *fmt, TmpHeader *tmp, uint32_t *data_size, l
 		*data_size = tmp->chunk_size;
 		*data_offset = ftell(fp);
 		fprintf(stderr, "process_read: data chunk is loaded\n");
-		fprintf(stderr, "data_size: %u\n", data_size);
-		fprintf(stderr, "data_offset %ld\n");
+		fprintf(stderr, "data_size: %u\n", *data_size);
+		fprintf(stderr, "data_offset %ld\n", *data_offset);
 
 		// 残りのサンプルデータを飛ばして次のチャンクに飛ぶ
 		if (fseek(fp, tmp->chunk_size, SEEK_CUR) != 0) {
@@ -113,34 +114,71 @@ int	process_read(FILE *fp, FmtChunk *fmt, TmpHeader *tmp, uint32_t *data_size, l
 	return 0;
 }
 
-int	*get_bin(FILE fp, const FmtChunk *fmt, uint32_t data_size, long data_offset, float start_time ,float end_time) {
-	// 学習用に敢えて計算
-	uint32_t	bytes_per_sample = (fmt->bit_depth / 8) *fmt->channel_num;
-	uint32_t	bytes_per_second = bytes_per_sample * fmt->sample_rate;
-	if (fmt->byte_rate != bytes_per_second) {
-		fprintf(stderr, "ERROR get_bin: bytes_per_second is incorrect\n");
-		return -1;
-	}
-	fprintf(stderr, "\nget_bin: bytes_per_sample formula is correct\n");
+int	print_bin(FILE *fp, const FmtChunk *fmt, uint32_t data_size, long data_offset, float start_time, float end_time) {
 
-	if (end_time > start_time) {
-		fprintf(stderr, "ERROR get_bin: Argument is invalid\n");
+	// 開始位置と終了位置の数値の整合性確認
+	if (end_time < start_time) {
+		fprintf(stderr, "ERROR print_bin Argument is invalid\n");
 		fprintf(stderr, "start_time: %.3f end_time: %.3f\n", start_time, end_time);
 		return -1;
 	}
+
+	uint32_t	bytes_per_sample = (fmt->bit_depth / 8) * fmt->channel_num;
+	uint32_t	bytes_per_second = bytes_per_sample * fmt->sample_rate;		// 学習用に敢えて計算
+	float		duration = (float)data_size / (float)bytes_per_second;
+	// 終了位置の秒数とファイルの持っているデータの秒数の整合性確認
+	if (duration < end_time) {
+		fprintf(stderr, "ERROR print_bin Argument is invalid\n");
+		fprintf(stderr, "Duration: %.3f end_time: %.3f\n", duration, end_time);
+	}
+
+	if (fmt->byte_rate != bytes_per_second) {					//学習用の計算の正誤確認
+		fprintf(stderr, "ERROR print_bin bytes_per_second is incorrect\n");
+		return -1;
+	}
+	fprintf(stderr, "\nprint_bin bytes_per_sample formula is correct\n");
 
 	// ループしてすべてのバイナリデータを取得
 	// ※ カウントはidxで行っているので注意
 	long	start_offset = data_offset + (long)((float)fmt->byte_rate * start_time);
 	long	end_offset = data_offset + (long)((float)fmt->byte_rate * end_time);
-	int	howmany_bins = (int)end_time - (int)start_time;
-	int	*result_array = malloc(sizeof(int) * (howmany_bins + 1));
-		//howmany_binsはidxなので、実際に読むバイナリ数は+1
-	for (int i = 0; i <= howmany_bins; i++) {
-		if (fread(result_array[i], bytes_per_sample, ))
+	fprintf(stderr, "\nstart_offset(%ld): data_offset(%ld) + (fmt->byte_rate(%u) * start_time(%.3f))\n",
+			start_offset, data_offset, fmt->byte_rate, start_time);
+	fprintf(stderr, "end_offset(%ld): data_offset(%ld) + (fmt->byte_rate(%u) * end_time(%.3f))",
+		end_offset, data_offset, fmt->byte_rate, end_time);
 
+	int	i = 0;							// 一行16個のバイナリを表示するためのidx
+	long	print_offset = start_offset;				// print_offsetは今読んでいるoffsetを左に表示するために使う
+	int	sample = 0;
+
+	if (fseek(fp, data_offset, SEEK_SET) != 0) {
+		fprintf(stderr, "ERROR fseek/print_bin Cannot seek data offset\n");
+		return -1;
+	}
+	fprintf(stderr, "\nfseek/print_bin: seek data_offset: %ld\n", data_offset);
+
+	// hexdump -Cと同じように出力
+	while (end_offset > print_offset) {
+		printf("%08lx ", print_offset); // 16進数のデータオフセットを左に表示
+		i = 0;
+		while (16 > i && end_offset >= print_offset) {
+			/*
+				1. サンプルごとにバイナリを取得
+				2. printf
+				3. i++, print_offset+=bytes_per_sample
+			*/
+			if (fread(&sample, bytes_per_sample, 1, fp) != 1) {
+				fprintf(stderr, "ERROR fread/print_bin: Cannot read sample data\n");
+				return -1;
+			}
+			printf("%02x ", sample);
+			i++;
+			print_offset += bytes_per_sample;
+		}
+		printf("\n");
 	}
 
+	return 0;
 }
 
 int	main(int argc, char **argv) {
@@ -184,5 +222,13 @@ int	main(int argc, char **argv) {
 
 	float	start_time = atof(argv[2]);
 	float	end_time = atof(argv[3]);
+	result = print_bin(fp, &fmt, data_size, data_offset, start_time, end_time);
+	if (result == -1) {
+		fprintf(stderr, "ERROR print_bin/main: returned error");
+		return -1;
+	}
+
+	fclose(fp);
+	return 0;
 
 }
