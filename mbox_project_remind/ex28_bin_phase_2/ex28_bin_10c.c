@@ -51,7 +51,7 @@ typedef	struct {
 
 
 
-int	process_read(FILE *fp, FmtChunk *fmt, TmpHeader *tmp, uint32_t *data_size, long *data_offset) {
+int	process_read(FILE *fp, FmtChunk *fmt, TmpHeader *tmp, int *is_fmt, uint32_t *data_size, long *data_offset) {
 
 	// tmpへの読み込み
 	if (fread(tmp, sizeof(*tmp), 1, fp) != 1) {
@@ -74,6 +74,8 @@ int	process_read(FILE *fp, FmtChunk *fmt, TmpHeader *tmp, uint32_t *data_size, l
 			fprintf(stderr, "ERROR fread/process_read: Cannot read fmt chunk\n");
 			return -1;
 		}
+		*is_fmt = 1;
+		fprintf(stderr, "process_read: fmt chunk is loaded\n");
 
 		// fmtチャンクが想定より大きかった場合スキップ
 		if (fmt->chunk_size > sizeof(*fmt) - 8) {
@@ -86,7 +88,6 @@ int	process_read(FILE *fp, FmtChunk *fmt, TmpHeader *tmp, uint32_t *data_size, l
 			fprintf(stderr, "fmt chunk size: %u\n", fmt->chunk_size);
 			fprintf(stderr, "skipped size: %ld\n", skip_num);
 		}
-		fprintf(stderr, "process_read: fmt chunk is loaded\n");
 	} else if (memcmp(tmp->chunk_id, "data", 4) == 0) {
 		// dataチャンク情報の読み込み
 		fprintf(stderr, "\nmemcmp/process_read: data chunk detected\n");
@@ -128,9 +129,11 @@ int	print_bin(FILE *fp, const FmtChunk *fmt, uint32_t data_size, long data_offse
 	uint32_t	bytes_per_sample = (fmt->bit_depth / 8) * fmt->channel_num;
 	uint32_t	bytes_per_second = bytes_per_sample * fmt->sample_rate;		// 学習用に敢えて計算
 	float		duration = (float)data_size / (float)bytes_per_second;
+	fprintf(stderr, "\nprint_bin: duration(%.3f) = data_size(%.3f) / bytes_per_second(%.3f byte_rate:(%u))",
+		duration, (float)data_size, (float)bytes_per_second, fmt->byte_rate);
 	// 終了位置の秒数とファイルの持っているデータの秒数の整合性確認
 	if (duration < end_time) {
-		fprintf(stderr, "ERROR print_bin Argument is invalid\n");
+		fprintf(stderr, "ERROR print_bin: Argument is invalid\n");
 		fprintf(stderr, "Duration: %.3f end_time: %.3f\n", duration, end_time);
 		return -1;
 	}
@@ -141,8 +144,6 @@ int	print_bin(FILE *fp, const FmtChunk *fmt, uint32_t data_size, long data_offse
 	}
 	fprintf(stderr, "\nprint_bin bytes_per_sample formula is correct\n");
 
-	// ループしてすべてのバイナリデータを取得
-	// ※ カウントはidxで行っているので注意
 	long	start_offset = data_offset + (long)((float)fmt->byte_rate * start_time);
 	long	end_offset = data_offset + (long)((float)fmt->byte_rate * end_time);
 	fprintf(stderr, "\nstart_offset(%ld): data_offset(%ld) + (fmt->byte_rate(%u) * start_time(%.3f))\n",
@@ -150,33 +151,36 @@ int	print_bin(FILE *fp, const FmtChunk *fmt, uint32_t data_size, long data_offse
 	fprintf(stderr, "end_offset(%ld): data_offset(%ld) + (fmt->byte_rate(%u) * end_time(%.3f))",
 		end_offset, data_offset, fmt->byte_rate, end_time);
 
-	int	i = 0;							// 一行16個のバイナリを表示するためのidx
-	long	print_offset = start_offset;				// print_offsetは今読んでいるoffsetを左に表示するために使う
-	long	sample = 0;
+	int		i = 0;					// 一行16個のバイナリを表示するためのidx
+	long		print_offset = start_offset;		// print_offsetは今読んでいるoffsetを左に表示するために使う
+	unsigned char	byte_sample = 0;			// hexdumpと同じく1バイトずつ出力するので、すべての環境で1バイトのcharを使う
 
 	if (fseek(fp, start_offset, SEEK_SET) != 0) {			// start_offsetに移動
 		fprintf(stderr, "ERROR fseek/print_bin Cannot seek data offset\n");
 		return -1;
 	}
-	fprintf(stderr, "\nfseek/print_bin: seek data_offset: %ld\n", data_offset);
+	fprintf(stderr, "\nfseek/print_bin: seek start_offset: %ld\n\n", start_offset);
 
+
+	// ループしてすべてのバイナリデータを取得
+	// ※ offsetはidxなので条件式に注意
 	// hexdump -Cと同じように出力
 	while (end_offset > print_offset) {
 		printf("%08lx ", print_offset); // 16進数のデータオフセットを左に表示
 		i = 0;
-		while (16 > i && end_offset > print_offset) {
+		while (16 > i && end_offset > print_offset) {	// start(0)から読むので(end未満)、>で最後は含まないようにする
 			/*
 				1. サンプルごとにバイナリを取得
 				2. printf
 				3. i++, print_offset+=bytes_per_sample
 			*/
-			if (fread(&sample, bytes_per_sample, 1, fp) != 1) {
+			if (fread(&byte_sample, 1, 1, fp) != 1) {
 				fprintf(stderr, "ERROR fread/print_bin: Cannot read sample data\n");
 				return -1;
 			}
-			printf("%02lx ", sample);
+			printf("%02x ", byte_sample);
 			i++;
-			print_offset += bytes_per_sample;
+			print_offset++;
 		}
 		printf("\n");
 	}
@@ -215,18 +219,19 @@ int	main(int argc, char **argv) {
 
 	FmtChunk	fmt = {0};
 	TmpHeader	tmp = {0};
+	int		is_fmt = 0;
 	uint32_t	data_size = 0;
 	long		data_offset = 0;
-	int		result = process_read(fp, &fmt, &tmp, &data_size, &data_offset);
-	if (result == -1) {
-		fprintf(stderr, "ERROR process_read/main: returned error\n");
-		return -1;
+	while (!is_fmt || !data_size) {
+		if (process_read(fp, &fmt, &tmp, &is_fmt, &data_size, &data_offset) == -1) {
+			fprintf(stderr, "ERROR process_read/main: returned error\n");
+			return -1;
+		}
 	}
 
 	float	start_time = atof(argv[2]);
 	float	end_time = atof(argv[3]);
-	result = print_bin(fp, &fmt, data_size, data_offset, start_time, end_time);
-	if (result == -1) {
+	if (print_bin(fp, &fmt, data_size, data_offset, start_time, end_time) == -1) {
 		fprintf(stderr, "ERROR print_bin/main: returned error");
 		return -1;
 	}
