@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#define MAX_NUM 50
+#define MAX_NUM 100
 
 // 12-31: windows_start.wav (PCM, stereo) 専用に構築した。
 //	ロジックエラーを修正
@@ -65,15 +65,15 @@ int	process_read(FILE *fp, TmpHeader *tmp, FmtChunk *fmt, int *is_fmt, uint32_t 
 	// fmtチャンクの読み込み
 	if (memcmp(tmp->chunk_id, "fmt ", 4) == 0) {
 		fprintf(stderr, "\nprocess_read: fmt chunk detected\n");
-		fprintf(stderr, "chunk_id: %.4s\n", fmt->chunk_id);
+		fprintf(stderr, "chunk_id: %.4s\n", tmp->chunk_id);
 		// fmtチャンクを見つけたら、その先頭に移動
-		if (fseek(fp, -sizeof(*tmp), SEEK_CUR) != 0) {
+		if (fseek(fp, -8, SEEK_CUR) != 0) {
 			fprintf(stderr, "ERROR fseek/process_read: Cannot move to start of fmt chunk");
 			return -1;
 		}
 
 		// freadで読み込み
-		if (fread(fmt, sizeof(*fmt), 1, fp) != 0) {
+		if (fread(fmt, sizeof(*fmt), 1, fp) != 1) {
 			fprintf(stderr, "ERROR fread/process_read: Cannot read FmtChunk\n");
 			return -1;
 		}
@@ -139,7 +139,7 @@ void	get_max_stereo(uint16_t bits_per_sample, int *stereo_sample, int *max_sampl
 	if (stereo_sample[0] < 0)
 		stereo_sample[0] *= -1;
 	if (stereo_sample[1] < 0)
-		stereo_sample[1] *= 1;
+		stereo_sample[1] *= -1;
 
 	// 最大値の検証
 	if (max_sample[0] < stereo_sample[0])
@@ -245,8 +245,8 @@ int	main(int argc, char **argv) {
 	// 2. サンプルごとに読み込み、最大値を走査
 		// byte_sample: blockアラインごとにサンプルを格納する変数
 		// - データサンプルはblock_alignが単位なので、それ以上分割したら壊れる
-	int	max_sample[2];
-	int	stereo_sample[2];
+	int	max_sample[2] = {0, 0};		// ゴミ値を初期化
+	int	stereo_sample[2] = {0, 0};
 	if (fmt.channel_num == 2) {
 		// int	process_get_stereo(FILE *fp, const FmtChunk *fmt, uint32_t data_size, int *stereo_sample, int *max_sample)
 		if (process_get_stereo(fp, &fmt, stereo_sample, max_sample) == -1) {
