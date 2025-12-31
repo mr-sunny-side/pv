@@ -4,7 +4,17 @@
 
 #define MAX_NUM 50
 
-// 12-31: Claudeの提案を読む
+// 12-31: windows_start.wav (PCM, stereo) 専用に構築した。
+//	ロジックエラーを修正
+// ```bash
+// 	% $C_FILE/ex28_bin_11a_file $BIN_FILE/windows_start.wav
+// 	main: This file is WAV
+
+// 	process_read: fmt chunk detected
+// 	chunk_id:
+// 	ERROR fread/process_read: Cannot read FmtChunk
+// 	ERROR process_read/main: returned error
+// ```
 
 // 前回の復習
 // 1. 無限ループを避けるため、EOFで終了するコードを書く。またはマクロで定義する
@@ -42,6 +52,8 @@ typedef	struct {
 } FmtChunk;
 
 #pragma pack(pop)
+
+
 
 int	process_read(FILE *fp, TmpHeader *tmp, FmtChunk *fmt, int *is_fmt, uint32_t *data_size, long *data_offset) {
 
@@ -98,9 +110,73 @@ int	process_read(FILE *fp, TmpHeader *tmp, FmtChunk *fmt, int *is_fmt, uint32_t 
 	}
 
 	return 0;
-
-
 }
+
+
+void	get_max_stereo(uint16_t bits_per_sample, int *stereo_sample, int *max_sample) {
+	// 16ビットPCMなら符号付き16ビット整数、つまり-32768から32767の範囲の値です。
+	// 8ビットPCMなら符号なし8ビット整数で0から255の範囲です。
+	// 32ビット浮動小数点PCMなら-1.0から1.0の範囲の浮動小数点数です。
+
+	// 8bit PCMの場合128からの絶対値に変換し、振幅の計算をしやすくする。
+	if (bits_per_sample == 8) {
+		if (stereo_sample[0] == 128)
+			stereo_sample[0] = 0;
+		else if (stereo_sample[0] < 128)
+			stereo_sample[0] = 128 - stereo_sample[0];
+		else
+			stereo_sample[0] = stereo_sample[0] - 128;
+
+		if (stereo_sample[1] == 128)
+			stereo_sample[1] = 0;
+		else if (stereo_sample[1] < 128)
+			stereo_sample[1] = 128 - stereo_sample[1];
+		else
+			stereo_sample[1] = stereo_sample[1] - 128;
+	}
+
+	// 8bit PCM以外のPCMの場合、すべての負の数を絶対値に変換
+	if (stereo_sample[0] < 0)
+		stereo_sample[0] *= -1;
+	if (stereo_sample[1] < 0)
+		stereo_sample[1] *= 1;
+
+	// 最大値の検証
+	if (max_sample[0] < stereo_sample[0])
+		max_sample[0] = stereo_sample[0];
+	if (max_sample[1] < stereo_sample[1])
+		max_sample[1] = stereo_sample[1];
+}
+
+// byte_sampleとmax_sampleを比較して、振幅の最大値を更新する関数
+
+// 最大振幅を見つけるループ関数(stereo)
+int	process_get_stereo(FILE *fp, const FmtChunk *fmt, int *stereo_sample, int *max_sample) {
+
+	uint16_t	bits_per_sample = fmt->bit_depth * fmt->channel_num;
+
+	while (1) {
+		if (fread(&stereo_sample[0], fmt->block_align / 2, 1, fp) != 1) {
+			if (feof(fp))	// fread == errorの際は、ファイル終端 or errorなので、終端かチェックしてループを抜ける
+				break;
+			fprintf(stderr, "ERROR fread/process_get_stereo: Cannot read stereo sample\n");
+			return -1;
+		}
+
+		if (fread(&stereo_sample[1], fmt->block_align / 2, 1, fp) != 1) {
+			fprintf(stderr, "ERROR fread/process_get_stereo: Cannot read stereo sample\n");
+			return -1;
+			// ファイル終端が、片方だけ読み込めないケースはあり得ない
+			// よってこっちのfread() == errorは本当にエラー
+		}
+
+		get_max_stereo(bits_per_sample, stereo_sample, max_sample);
+
+	}
+
+	return 0;
+}
+
 
 int	main(int argc, char **argv) {
 
@@ -144,9 +220,17 @@ int	main(int argc, char **argv) {
 	while ((!is_fmt || !data_size) && i < MAX_NUM) {
 		if (process_read(fp, &tmp, &fmt, &is_fmt, &data_size, &data_offset) == -1) {
 			fprintf(stderr, "ERROR process_read/main: returned error\n");
+			fclose(fp);
 			return -1;
 		}
 		i++;
+	}
+
+	// PCM formatか確認
+	if (fmt.audio_format != 1) {
+		fprintf(stderr, "ERROR main: This file is not PCM format\n");
+		fclose(fp);
+		return -1;
 	}
 
 	// 最大振幅の走査
@@ -154,8 +238,36 @@ int	main(int argc, char **argv) {
 	if (fseek(fp, data_offset, SEEK_SET) != 0) {
 		fprintf(stderr, "ERROR fread/main: Cannot move to data_offset\n");
 		fprintf(stderr, "data_offset: %ld\n", data_offset);
+		fclose(fp);
 		return -1;
 	}
+
+	// 2. サンプルごとに読み込み、最大値を走査
+		// byte_sample: blockアラインごとにサンプルを格納する変数
+		// - データサンプルはblock_alignが単位なので、それ以上分割したら壊れる
+	int	max_sample[2];
+	int	stereo_sample[2];
+	if (fmt.channel_num == 2) {
+		// int	process_get_stereo(FILE *fp, const FmtChunk *fmt, uint32_t data_size, int *stereo_sample, int *max_sample)
+		if (process_get_stereo(fp, &fmt, stereo_sample, max_sample) == -1) {
+			fprintf(stderr, "ERROR process_get_stereo/main: returned error\n");
+			fclose(fp);
+			return -1;
+		}
+	}
+
+	printf("Max sound : %d, %d", max_sample[0], max_sample[1]);
+
+	fclose(fp);
+	return 0;
+
+
+	// 今回はステレオ専用にして、windows_start
+
+
+
+
+
 
 
 }
