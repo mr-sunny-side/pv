@@ -53,8 +53,10 @@ int	process_read(FILE *fp, TmpHeader *tmp, FmtChunk *fmt, int *is_fmt, uint32_t 
 		}
 		fprintf(stderr, "process_read: fmt chunk is loaded\n");
 
-		uint32_t	skip_size = fmt->chunk_size - (uint32_t)sizeof(FmtChunk);
-		if (sizeof(FmtChunk) < fmt->chunk_size) {
+		// chunk_sizeにはチャンクIDとチャンクサイズは含まれないので注意
+		uint32_t	fmt_chunk_size = sizeof(FmtChunk) - 8;
+		if (fmt_chunk_size < fmt->chunk_size) {
+			uint32_t	skip_size = fmt->chunk_size - fmt_chunk_size;
 			if (fseek(fp, skip_size, SEEK_CUR) != 0) {
 				fprintf(stderr, "ERROR fseek/process_read: Cannot skip remaining fmt data\n");
 				return -1;
@@ -87,13 +89,14 @@ int	get_bin(FILE *fp, const FmtChunk *fmt, int *bin_data) {
 
 	int16_t		tmp_bin = 0;
 
-	// 右チャンネル
+	// 左チャンネル
 	if (fread(&tmp_bin, fmt->bit_depth / 8, 1, fp) != 1) {
 		fprintf(stderr, "ERROR fread/get_bin: Cannot read file\n");
 		return -1;
 	}
 	bin_data[0] = (int)tmp_bin;
 
+	// 右チャンネル
 	if (fread(&tmp_bin, fmt->bit_depth / 8, 1, fp) != 1) {
 		fprintf(stderr, "ERROR fread/get_bin: Cannot read file\n");
 		return -1;
@@ -103,27 +106,37 @@ int	get_bin(FILE *fp, const FmtChunk *fmt, int *bin_data) {
 	return 0;
 }
 
-void	conf_zero_cross(int *closs_count, int *bin_data) {
+void	conf_zero_cross(int *cross_count, int *bf_data, int *bin_data) {
 
-	if (bin_data[0] == 0)
-		closs_count[0]++;
-	if (bin_data[1] == 0)
-		closs_count[1]++;
+	// 左チャンネルのcrossカウント
+	if (bf_data[0] <= 0 && 0 < bin_data[0]) {
+		cross_count[0]++;
+	} else if (0 <= bf_data[0] && bin_data[0] < 0) {
+		cross_count[0]++;
+	}
+
+	// 右チャンネルのcrossカウント
+	if (bf_data[1] <= 0 && 0 < bin_data[1]) {
+		cross_count[1]++;
+	} else if (0 <= bf_data[1] && bin_data[1] < 0) {
+		cross_count[1]++;
+	}
+
 }
 
 void	conf_max_bin(int *max_bin, int *bin_data) {
 
 	// 振幅データを絶対値に変換
-	if (bin_data[0] < 0)
-		bin_data[0] *= -1;
-	if (bin_data[1] < 0)
-		bin_data[1] *= -1;
+	// 負の値だけにすると絶対値が更新されないので注意
+	int	abs_l = abs(bin_data[0]);
+	int	abs_r = abs(bin_data[1]);
+
 
 	// 最大振幅を更新
-	if (max_bin[0] < bin_data[0])
-		max_bin[0] = bin_data[0];
-	if (max_bin[1] < bin_data[1])
-		max_bin[1] = bin_data[1];
+	if (max_bin[0] < abs_l)
+		max_bin[0] = abs_l;
+	if (max_bin[1] < abs_r)
+		max_bin[1] = abs_r;
 }
 
 int	main(int argc, char **argv) {
@@ -187,10 +200,19 @@ int	main(int argc, char **argv) {
 	}
 	fprintf(stderr, "\nmain: move to data_offset\n");
 
-	// バイナリデータの読み込みとゼロクロス回数カウント・最大振幅確認のループ
 	int	bin_data[2] = {0, 0};
 	int	max_bin[2] = {0, 0};
+
+	int	bf_data[2] = {0, 0};
 	int	cross_count[2] = {0, 0};
+
+	// あらかじめbf_dataに比較用のバイナリデータを読み込み
+	if (get_bin(fp, &fmt, bf_data) == -1) {
+		fprintf(stderr, "ERROR get_bin/main: Cannot read bf_data\n");
+		goto close_error;
+	}
+
+	// バイナリデータの読み込みとゼロクロス回数カウント・最大振幅確認のループ
 	while (1) {
 		// int	get_bin(FILE *fp, const FmtChunk *fmt, int *bin_data)
 		if (get_bin(fp, &fmt, bin_data) == -1) {
@@ -202,14 +224,17 @@ int	main(int argc, char **argv) {
 			goto close_error;
 		}
 		conf_max_bin(max_bin, bin_data);
-		conf_zero_cross(cross_count, bin_data);
+		conf_zero_cross(cross_count, bf_data, bin_data);
+		// 前のバイナリデータを記録、crossカウントする際に比較する
+		bf_data[0] = bin_data[0];
+		bf_data[1] = bin_data[1];
 	}
 
 	printf("\n=== WAV statistics ===\n");
 	printf("Maximum Amplitude:\n");
 	printf("L %d\n", max_bin[0]);
 	printf("R %d\n", max_bin[1]);
-	printf("\nZero Closs Count:\n");
+	printf("\nZero Cross Count:\n");
 	printf("L %d\n", cross_count[0]);
 	printf("R %d\n", cross_count[1]);
 
