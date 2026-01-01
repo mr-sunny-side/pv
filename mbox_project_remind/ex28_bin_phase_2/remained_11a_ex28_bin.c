@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
 
 // 前回の復習
 // 1. 無限ループを避けるため、feof()を利用
@@ -89,6 +90,45 @@ int	process_read(FILE *fp, TmpHeader *tmp, FmtChunk *fmt, int *is_fmt, uint32_t 
 	return 0;
 }
 
+int	*get_bin(FILE *fp, const FmtChunk *fmt) {
+// 2チャンネル分のバイナリデータを返す関数
+// errorの際はNULLを返す
+
+	int16_t		tmp_data = 0;				// バイナリデータをint型に符号拡張するためのtemp
+	int		*bin_data = malloc(sizeof(int) * 2);	// 今回は1チャンネル16bitPCM想定なので**符号付き**int16_t
+
+	// 左チャンネル
+	if (fread(&tmp_data, fmt->bit_depth / 8, 1, fp) != 1) {
+		fprintf(stderr, "ERROR fread/get_bin: Cannot read bin data\n");
+		return NULL;
+	}
+	bin_data[0] = (int)tmp_data;
+
+	// 右チャンネル
+	if (fread(&tmp_data, fmt->bit_depth / 8, 1, fp) != 1) {
+		fprintf(stderr, "ERROR fread/get_bin: Cannot read bin data\n");
+		return NULL;
+	}
+	bin_data[1] = (int)tmp_data;
+
+	return bin_data;
+
+}
+
+void	conf_max_bin(int *is_max, int *bin_data) {
+// 最大振幅を更新する関数
+
+	if (bin_data[0] < 0)
+		bin_data[0] *= -1;
+	if (bin_data[1] < 0)
+		bin_data[1] *= -1;
+
+	if (is_max[0] < bin_data[0])
+		is_max[0] = bin_data[0];
+	if(is_max[1] < bin_data[1])
+		is_max[1] = bin_data[1];
+}
+
 int	main(int argc, char **argv) {
 
 	if (argc != 2) {
@@ -125,11 +165,11 @@ int	main(int argc, char **argv) {
 	//int	process_read(FILE *fp, TmpHeader *tmp, FmtChunk *fmt, int *is_fmt, uint32_t *data_size, long *data_offset) {
 	while (!is_fmt || !data_size) {
 		if (process_read(fp, &tmp, &fmt, &is_fmt, &data_size, &data_offset) == -1) {
+			if (feof(fp))
+				break;
 			fprintf(stderr, "ERROR process_read/main: returned error\n");
 			goto close_error;
 		}
-		if (feof(fp))
-			break;
 	}
 
 	if (!is_fmt || !data_size) {
@@ -145,6 +185,35 @@ int	main(int argc, char **argv) {
 
 	// fmtチャンクとdataヘッダーの抽出、検証は完了
 	// 最大振幅の走査
+
+	// data_offsetに移動
+	if(fseek(fp, data_offset, SEEK_SET) != 0) {
+		fprintf(stderr, "ERROR fseek/main: Cannot move to data_offset\n");
+		goto close_error;
+	}
+	fprintf(stderr, "main: move to data_offset: %ld\n", ftell(fp));
+
+	// feofでbreak
+	// int	*get_bin(FILE *fp, FmtChunk *fmt, uint32_t data_size, long data_offset) {
+	int	*bin_data = NULL;
+	int	is_max[2] = {0, 0};
+	while (1) {
+		// get_binのfreadがEOFでエラーを返したときの処理
+		if ((bin_data = get_bin(fp, &fmt)) == NULL && feof(fp)) {
+			fprintf(stderr, "get_bin/main: reached EOF\n");
+			break;
+		} else if (bin_data == NULL && !feof(fp)) {
+			fprintf(stderr, "get_bin/main: returned error\n");
+			goto close_error;
+		}
+		conf_max_bin(is_max, bin_data);
+		free(bin_data);
+	}
+
+	printf("\n=== Max Sound ===\n");
+	printf("L: %d\n", is_max[0]);
+	printf("R: %d\n", is_max[1]);
+	// 振幅は整数で表されるので%d
 
 	fclose(fp);
 	return 0;
