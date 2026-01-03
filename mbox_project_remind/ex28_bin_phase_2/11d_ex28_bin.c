@@ -3,6 +3,7 @@
 #include <string.h>
 
 // **目的**: 最大振幅、ゼロクロスを1回の走査で計算する(余裕があればRMS)
+// 01-03: process_read関数の作成から
 
 #pragma pack(push, 1)
 
