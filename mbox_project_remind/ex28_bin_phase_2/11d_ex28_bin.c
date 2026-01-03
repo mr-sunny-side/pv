@@ -1,12 +1,11 @@
+
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
 
 // **目的**: 最大振幅、ゼロクロスを1回の走査で計算する(余裕があればRMS)
-// 01-03: チャンク情報読み取りまで記述
-//		- 最大振幅、ゼロクロスの操作記述から
-//		- 16bitPCMでない場合、チャンク情報、durationなどを出力して終了する
-
+// 01-03: 最大振幅がバグっているので、freadのバッファ修正
 #pragma pack(push, 1)
 
 typedef	struct {
@@ -31,7 +30,7 @@ typedef	struct {
 	uint16_t	bit_depth;
 }	FmtChunk;
 
-int	process_read(FILE *fp, FmtChunk *fmt, TmpHeader *tmp, int *is_fmt, uint32_t *data_size, long *data_offset) {
+int		process_read(FILE *fp, FmtChunk *fmt, TmpHeader *tmp, int *is_fmt, uint32_t *data_size, long *data_offset) {
 
 	if (fread(tmp, sizeof(TmpHeader), 1, fp) != 1) {
 		fprintf(stderr, "ERROR fread/process_read: Cannot read TmpHeader\n");
@@ -88,7 +87,39 @@ int	process_read(FILE *fp, FmtChunk *fmt, TmpHeader *tmp, int *is_fmt, uint32_t 
 	return 0;
 }
 
-int	main(int argc, char **argv) {
+void	get_max_bin(uint16_t *max_bin, int16_t *cur_bin) {
+
+	uint16_t	abs_l = abs(cur_bin[0]);
+	uint16_t	abs_r = abs(cur_bin[1]);
+
+	if (max_bin[0] < abs_l) {
+		max_bin[0] = abs_l;
+	}
+
+	if (max_bin[1] < abs_r) {
+		max_bin[1] = abs_r;
+	}
+}
+
+void	count_zero_cross(int *zero_cross, int16_t *pre_bin, int16_t *cur_bin) {
+	// 初期値が０なのでpre_binの条件式は慎重に
+
+	if (pre_bin[0] < 0 && 0 <= cur_bin[0]) {
+		zero_cross[0]++;
+	} else if (0 < pre_bin[0] && cur_bin[0] <= 0) {
+		zero_cross[0]++;
+	}
+
+	if (pre_bin[1] < 0 && 0 <= cur_bin[1]) {
+		zero_cross[1]++;
+	} else if (0 < pre_bin[1] && cur_bin[1] <= 0) {
+		zero_cross[1]++;
+	}
+
+
+}
+
+int		main(int argc, char **argv) {
 
 	if (argc != 2) {
 		fprintf(stderr, "ERROR main: Argument error\n");
@@ -137,6 +168,87 @@ int	main(int argc, char **argv) {
 		fprintf(stderr, "data_offset: %ld\n", data_offset);
 		goto clean_error;
 	}
+
+	//16bitPCMか確認
+	// === WAV File Information ===
+	// Audio format: 1 (PCM)
+	// Channels: 1 (Mono)
+	// Sample rate: 44100 Hz
+	// Bits per sample: 16
+	// Data size: 88200 bytes
+	// Duration: 1.00 seconds
+
+	if (fmt.audio_format != 1 || fmt.bit_depth != 16 || fmt.channel_num != 2) {
+		fprintf(stderr, "main: This is not 16bitPCM Stereo WAV\n");
+		printf("\n");
+
+		uint16_t	bits_per_sample = fmt.bit_depth * fmt.channel_num;
+		uint16_t	bit_rate = bits_per_sample * fmt.sample_rate;
+		uint16_t	byte_rate = bit_rate / 8;
+		float	duration = (float)data_size / (float)byte_rate;
+		printf("=== WAV File Information ===\n");
+		printf("Audio format %u (%s)\n", fmt.audio_format, 
+		  fmt.audio_format == 1 ? "PCM" : "Unkown");
+		printf("Channels: %u (%s)\n", fmt.channel_num, 
+		  fmt.channel_num == 1 ? "Mono" : "Stereo");
+		printf("Sample rate: %u Hz\n", fmt.sample_rate);
+		printf("Bits per sample: %u\n", bits_per_sample);
+		printf("Data size: %u bytes\n", data_size);
+		printf("Duration: %.2f\n", duration);
+
+		fclose(fp);
+		return 0;
+	}
+
+	// data_offsetへ移動
+	if (fseek(fp, data_offset, SEEK_SET) != 0) {
+		fprintf(stderr, "ERROR fread/main: Cannot move to data_offset\n");
+		goto clean_error;
+	}
+
+	// bin_dataを走査
+	int16_t		pre_bin[2] = {0, 0};
+	int16_t		cur_bin[2] = {0, 0};
+	uint16_t	max_bin[2] = {0, 0};
+	int		zero_cross[2] = {0, 0};
+	uint16_t	byte_depth = fmt.bit_depth / 8;
+	while (1) {
+		// bin dataを読み込み
+		if (fread(&cur_bin[0], byte_depth, 1, fp) != 1) {
+			if (feof(fp))
+				break;
+			fprintf(stderr, "ERROR fread/main: Cannot read bin data\n");
+			goto clean_error;
+		}
+		if (fread(&cur_bin[1], byte_depth, 1, fp) != 1) {
+			fprintf(stderr, "ERROR fread/main: Cannot read bin data\n");
+			goto clean_error;
+		}
+		get_max_bin(max_bin, cur_bin);
+		count_zero_cross(zero_cross, pre_bin, cur_bin);
+
+		pre_bin[0] = cur_bin[0];
+		pre_bin[1] = cur_bin[1];
+	}
+
+	uint16_t	bits_per_sample = fmt.bit_depth * fmt.channel_num;
+	uint16_t        bytes_per_sample = bits_per_sample / 8;
+        uint16_t        byte_rate = bytes_per_sample * fmt.sample_rate; 
+        float	        duration = (float)(data_size / byte_rate);
+	printf("=== WAV File Information ===\n");
+	printf("Audio format %u (%s)\n", fmt.audio_format, 
+	  fmt.audio_format == 1 ? "PCM" : "Unkown");
+	printf("Channels: %u (%s)\n", fmt.channel_num, 
+	  fmt.channel_num == 1 ? "Mono" : "Stereo");
+	printf("Sample rate: %u Hz\n", fmt.sample_rate);
+	printf("Bits per sample: %u\n", bits_per_sample);
+	printf("Data size: %u bytes\n", data_size);
+	printf("Duration: %.2f\n", duration);
+	printf("Max sound: \n");
+	printf("L %u : R %u\n", max_bin[0], max_bin[1]);
+	printf("Zero cross: \n");
+	printf("L %d : R %d\n", zero_cross[0], zero_cross[1]);
+
 
 	fclose(fp);
 	return 0;
