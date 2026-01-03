@@ -1,0 +1,4 @@
+mbox_project_remind/_test_case/*
+mbox_project_remind/_mbox/*
+mbox_project_remind/_bin/*
+*.json
