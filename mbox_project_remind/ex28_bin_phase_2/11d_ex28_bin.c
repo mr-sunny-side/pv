@@ -4,8 +4,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-// **目的**: 最大振幅、ゼロクロスを1回の走査で計算する(余裕があればRMS)
-// 01-03: 最大振幅がバグっているので、freadのバッファ修正
+// **目的**: 最大振幅、ゼロクロスを1回の走査で計算する
 #pragma pack(push, 1)
 
 typedef	struct {
@@ -89,8 +88,9 @@ int		process_read(FILE *fp, FmtChunk *fmt, TmpHeader *tmp, int *is_fmt, uint32_t
 
 void	get_max_bin(uint16_t *max_bin, int16_t *cur_bin) {
 
-	uint16_t	abs_l = abs(cur_bin[0]);
-	uint16_t	abs_r = abs(cur_bin[1]);
+        // absはint型を返す
+	int	abs_l = abs(cur_bin[0]);
+	int	abs_r = abs(cur_bin[1]);
 
 	if (max_bin[0] < abs_l) {
 		max_bin[0] = abs_l;
@@ -119,7 +119,7 @@ void	count_zero_cross(int *zero_cross, int16_t *pre_bin, int16_t *cur_bin) {
 
 }
 
-int		main(int argc, char **argv) {
+int	main(int argc, char **argv) {
 
 	if (argc != 2) {
 		fprintf(stderr, "ERROR main: Argument error\n");
@@ -182,14 +182,14 @@ int		main(int argc, char **argv) {
 		fprintf(stderr, "main: This is not 16bitPCM Stereo WAV\n");
 		printf("\n");
 
-		uint16_t	bits_per_sample = fmt.bit_depth * fmt.channel_num;
-		uint16_t	bit_rate = bits_per_sample * fmt.sample_rate;
-		uint16_t	byte_rate = bit_rate / 8;
+		int	bits_per_sample = fmt.bit_depth * fmt.channel_num;
+		int	bit_rate = bits_per_sample * fmt.sample_rate;
+		int	byte_rate = bit_rate / 8;
 		float	duration = (float)data_size / (float)byte_rate;
 		printf("=== WAV File Information ===\n");
-		printf("Audio format %u (%s)\n", fmt.audio_format, 
+		printf("Audio format %u (%s)\n", fmt.audio_format,
 		  fmt.audio_format == 1 ? "PCM" : "Unkown");
-		printf("Channels: %u (%s)\n", fmt.channel_num, 
+		printf("Channels: %u (%s)\n", fmt.channel_num,
 		  fmt.channel_num == 1 ? "Mono" : "Stereo");
 		printf("Sample rate: %u Hz\n", fmt.sample_rate);
 		printf("Bits per sample: %u\n", bits_per_sample);
@@ -210,7 +210,7 @@ int		main(int argc, char **argv) {
 	int16_t		pre_bin[2] = {0, 0};
 	int16_t		cur_bin[2] = {0, 0};
 	uint16_t	max_bin[2] = {0, 0};
-	int		zero_cross[2] = {0, 0};
+        int		zero_cross[2] = {0, 0};
 	uint16_t	byte_depth = fmt.bit_depth / 8;
 	while (1) {
 		// bin dataを読み込み
@@ -231,14 +231,16 @@ int		main(int argc, char **argv) {
 		pre_bin[1] = cur_bin[1];
 	}
 
-	uint16_t	bits_per_sample = fmt.bit_depth * fmt.channel_num;
-	uint16_t        bytes_per_sample = bits_per_sample / 8;
-        uint16_t        byte_rate = bytes_per_sample * fmt.sample_rate; 
-        float	        duration = (float)(data_size / byte_rate);
+        // uint16だとサイズがオーバーフローしてしまう
+        // 構造体以外で使う際は、計算はintでいい
+	int	bits_per_sample = fmt.bit_depth * fmt.channel_num;
+	int	bytes_per_sample = bits_per_sample / 8;
+	int	byte_rate = bytes_per_sample * fmt.sample_rate;
+	float   duration = (float)data_size / (float)byte_rate;
 	printf("=== WAV File Information ===\n");
-	printf("Audio format %u (%s)\n", fmt.audio_format, 
+	printf("Audio format %u (%s)\n", fmt.audio_format,
 	  fmt.audio_format == 1 ? "PCM" : "Unkown");
-	printf("Channels: %u (%s)\n", fmt.channel_num, 
+	printf("Channels: %u (%s)\n", fmt.channel_num,
 	  fmt.channel_num == 1 ? "Mono" : "Stereo");
 	printf("Sample rate: %u Hz\n", fmt.sample_rate);
 	printf("Bits per sample: %u\n", bits_per_sample);
@@ -258,3 +260,9 @@ int		main(int argc, char **argv) {
 		return -1;
 
 }
+
+/*
+11dに取り組んでいます。このファイルは主に16bit stereo PCMを対象とした統計情報を表示するコードです。
+レビューをお願いします。　/review/
+/*
+ 
