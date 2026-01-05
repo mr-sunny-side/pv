@@ -7,29 +7,27 @@ import sys
 **目的**　統計情報、最大振幅、ゼロクロス回数を表示する
             - 16bit stereo PCM以外は統計情報のみ出力
 
-01-04:  process_read関数まで記述
-         - main関数内のるーぷ記述から
-         - ループについてはノーションを確認のこと
-
+01-04:  fmt, dataチャンク取得、16bitPCM stereoの条件分岐まで記述
+         - bin dataの取得ループから
 """
 
 def process_read(f): # bool, fmt_chunk, data_size, data_offset
     data = f.read(8)
     if len(data) != 8:
         print('ERROR read/process_read: Cannot read file', file=sys.stderr)
-        return False
+        return False, None, None, None
     tmp_id, tmp_size = struct.unpack('<4sI', data)
     
     # fmt chunkの検証
     if tmp_id == b'fmt ':
         print('process_read: fmt chunk detected', file=sys.stderr)
-        f.seek(-8, 1)   # fmt chunkの戦闘へ移動
+        f.seek(-8, 1)   # fmt chunkの先頭へ移動
         
         # fmt chunkの読み込み
         data = f.read(24)
         if len(data) != 24:
             print('ERROR read/process_read: Cannot read fmt chunk', file=sys.stderr)
-            return False
+            return False, None, None, None
         
         chunk_id, chunk_size, audio_format, channel_num, \
             sample_rate, byte_rate, block_align, bit_depth = struct.unpack('<4sIHHIIHH', data)
@@ -41,7 +39,7 @@ def process_read(f): # bool, fmt_chunk, data_size, data_offset
             print('process_read: Rest of fmt chunk is skipped', file=sys.stderr)
     
         # fmt chunk辞書に書き込み
-        print('process_read: fmt chunk is lorded', file=sys.stderr)
+        print('process_read: fmt chunk is loaded', file=sys.stderr)
         fmt_chunk = {
             'chunk_id': chunk_id,
             'chunk_size': chunk_size,
@@ -111,7 +109,7 @@ def print_stat(fmt_chunk, data_size):
     print(f'Audio format: {audio_format} ({is_pcm})')
     print(f'Channels: {channels} ({is_mono})')
     print(f'Sample rate: {sample_rate} Hz')
-    print(f'Bit per sample: {bits_per_sample}')
+    print(f'Bits per sample: {bits_per_sample}')
     print(f'Data size: {data_size}')
     print(f'Duration: {duration:.2f}')
 
@@ -126,22 +124,28 @@ def main():
             # waveフォーマットか確認
             if not conf_riff(f):
                 print('ERROR conf_riff/main: returned error', file=sys.stderr)
+                return -1
                 
             # fmt, dataチャンクの取得
             process_bool = False
-            fmt_chunk = {}
-            data_size = 0
-            data_offset = 0
+            fmt_chunk = None
+            data_size = None
+            data_offset = None
             while not fmt_chunk or not data_size or not data_offset:
                 # process_readがエラーを返したら、一旦ループをやめる
-                process_bool, fmt_chunk, data_size, data_offset = \
+                process_bool, tmp_fmt, tmp_size, tmp_offset = \
                     process_read(f)
                 if process_bool == False:
                     break
+                if tmp_fmt:
+                    fmt_chunk = tmp_fmt
+                elif tmp_size and tmp_offset:   # data_size, data_offsetは同時に見つかる
+                    data_size = tmp_size
+                    data_offset = tmp_offset
             
             # 各チャンクが読み込まれているか検証
             if not fmt_chunk or not data_size or not data_offset:
-                print('ERROR main: Cannot find fmt of data chunk', file=sys.stderr)
+                print('ERROR main: Cannot find fmt or data chunk', file=sys.stderr)
                 return -1
             
             #16bitPCM stereoか検証
@@ -150,15 +154,31 @@ def main():
                 fmt_chunk['channel_num'] != 2:
                 print('main: This file is not 16bitPCM Stereo WAV', file =sys.stderr)
                 print('', file=sys.stderr)
+                print_stat(fmt_chunk, data_size)    # 統計情報をprint
                 
-                print_stat(fmt_chunk, data_size)
+                return 0
+                
+            # 最大振幅、ゼロクロスの走査
+            f.seek(data_offset)     # data_offsetへ移動
+            
+            byte_depth = fmt_chunk['bit_depth'] / 8     # byte単位に変換
+            while True:     # bin data取得ループ
+                sample_l = f.read(byte_depth)
+                sample_r = f.read(byte_depth)
+                
+                if sample_l == b'' and sanple_r == b'':     # eofを検出
+                    break
+                elif len(sample_l) != byte_depth of len(sample_r) != byte_depth:
+                    print('ERROR read/main: Cannot read bin data', file=sys.stderr) # errorを別に検出
+                    return -1
+                    
+                
                 
             return 0
                 
                 
             
-    # 正しい記述を忘れた
-    except FileNotExistError as e:
+    except FileNotFoundError as e:
         print(e)
         return -1
     except Exception as e:
@@ -170,5 +190,4 @@ if __name__ == '__main__':
     
     
 """
-その内容を/mdに出力してください
 """
