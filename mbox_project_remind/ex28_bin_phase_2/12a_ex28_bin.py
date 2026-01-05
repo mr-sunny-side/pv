@@ -113,6 +113,39 @@ def print_stat(fmt_chunk, data_size):
     print(f'Data size: {data_size}')
     print(f'Duration: {duration:.2f}')
 
+def conf_zero_cross(pre_l, pre_r, sample_l, sample_r):
+    # 左右のゼロクロス判定を返す
+    
+    bool_l, bool_r = False, False
+    # 左チャンネルのゼロクロス判定
+    if pre_l < 0 and 0 <= sample_l:
+        bool_l = True
+    elif 0 < pre_l and sample_l <= 0:
+        bool_l = True
+
+    # 右チャンネル
+    if pre_r < 0 and 0 <= sample_r:
+        bool_r = True
+    elif 0 < pre_r and sample_r <= 0:
+        bool_r = True
+        
+    return bool_l, bool_r
+        
+def conf_max_sample(max_l, max_r, sample_l, sample_r):
+# 最大値が更新された場合、 最大値を更新して返す
+
+    ads_l = abs(sample_l)
+    ads_r = abs(sample_r)
+    
+    if max_l < ads_l:
+        max_l = ads_l
+    if max_r < ads_r:
+        max_r = ads_r
+        
+    return max_l, max_r
+        
+        
+
 def main():
     if len(sys.argv) != 2:
         print('ERROR main: Argument error', file=sys.stderr)
@@ -161,17 +194,43 @@ def main():
             # 最大振幅、ゼロクロスの走査
             f.seek(data_offset)     # data_offsetへ移動
             
-            byte_depth = fmt_chunk['bit_depth'] / 8     # byte単位に変換
+            byte_depth = int(fmt_chunk['bit_depth'] / 8)     # byte単位に変換（整数にすること）
+            max_l, max_r = 0, 0
+            pre_l, pre_r = 0, 0
+            cross_l, cross_r = 0, 0
             while True:     # bin data取得ループ
-                sample_l = f.read(byte_depth)
-                sample_r = f.read(byte_depth)
-                
-                if sample_l == b'' and sanple_r == b'':     # eofを検出
+                data = f.read(byte_depth * 2)  # 左右分のbinを読み込み
+                if len(data) == 0:          # eofのチェック
                     break
-                elif len(sample_l) != byte_depth of len(sample_r) != byte_depth:
-                    print('ERROR read/main: Cannot read bin data', file=sys.stderr) # errorを別に検出
+                elif len(data) != (byte_depth * 2):
+                    print('ERROR read/main: Cannot read bin data', file=sys.stderr) 
                     return -1
+                
+                # eofを検出
+                sample_l, sample_r = struct.unpack('<hh', data)       # 整数として展開         
+                
+                # ゼロクロス判定
+                bool_l, bool_r = conf_zero_cross(pre_l, pre_r, sample_l, sample_r)
+                if bool_l is True:
+                    cross_l += 1
+                if bool_r is True:
+                    cross_r += 1
                     
+                # 最大振幅の更新
+                max_l, max_r = conf_max_sample(max_l, max_r, sample_l, sample_r)
+                
+                # previous sampleの更新
+                pre_l, pre_r = sample_l, sample_r
+                    
+            # 統計情報の出力
+            print()
+            print_stat(fmt_chunk, data_size)
+            print('Max sample:')
+            print(f' L {max_l}')
+            print(f' R {max_r}')
+            print('Zero cross count:')
+            print(f' L {cross_l}')
+            print(f' R {cross_r}')
                 
                 
             return 0
