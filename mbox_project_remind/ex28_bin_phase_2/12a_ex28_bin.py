@@ -170,19 +170,5 @@ if __name__ == '__main__':
     
     
 """
-以下は12aの出力です。まだ書いている途中ですが、一旦ここまでをテストしています。何が間違っているか教えてください。
-
-```bash
-➜  ex28_bin_phase_2 git:(main) ✗ python3 12a_ex28_bin.py $BIN_FILE/sample.wav
-process_read: fmt chunk detected
-process_read: fmt chunk is lorded
-process_read: data chunk detected
- - data_size: 88200
- - data_offset: 44
-process_read: Unknown chunk is skipped: []
-ERROR read/process_read: Cannot read file
-ERROR main: Cannot find fmt of data chunk
-```
-
-
+その内容を/mdに出力してください
 """
