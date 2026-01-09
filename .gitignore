@@ -1,4 +1,4 @@
-mbox_project_remind/_test_case/*
-mbox_project_remind/_mbox/*
-mbox_project_remind/_bin/*
+nk_dev/_test_case/*
+nk_dev/_mbox/*
+nk_dev/_bin/*
 *.json
