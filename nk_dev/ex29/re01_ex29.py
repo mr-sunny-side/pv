@@ -21,7 +21,7 @@ class ClientData:
 	def __init__(self, nickname, client_socket, client_address):
 		self.nickname = nickname
 		self.client_socket = client_socket
-		self.address = cilent_address
+		self.address = client_address
 
 	def send_message(self, message):
 		try:
@@ -65,8 +65,8 @@ def broadcast(message):
 	if not isinstance(message, str):
 		print('ERROR sendall: message must be str')
 		return False
-	for user in client.keys():
-		if not client[user].send_message(message):
+	for user in clients.keys():
+		if not clients[user].send_message(message):
 			print('ERROR send_massege/sendall: return False')
 			return False
 	return True
