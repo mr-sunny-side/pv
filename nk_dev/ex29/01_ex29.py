@@ -29,7 +29,7 @@ def handle_client(client_socket, client_address):
 # クライアントからの通信を処理する
 
     # クライアントのアドレスと割り当てられたポート番号の表示
-    print(f'connection from {client_adderess[0]}:{client_address[1]}')
+    print(f'connection from {client_address[0]}:{client_address[1]}')
     
     try:
         # クライアントからのデータをバッファに保存
@@ -38,7 +38,7 @@ def handle_client(client_socket, client_address):
         
         if data:
             print(f'Received {len(data)} bytes:')
-            print(data.decode('utf-8', error='replace')) # strictならデコードエラーで終了
+            print(data.decode('utf-8', errors='replace')) # strictならデコードエラーで終了
             
             
         # レスポンスの送信
@@ -53,8 +53,8 @@ def handle_client(client_socket, client_address):
     except Exception as e:
         print(f'ERROR handle_client: {e}')
     finally:
-    # どんな場合でも最後にソケットを閉じて終了する
-    # ファイルディスクリプタがリークする　？？？
+        # どんな場合でも最後にソケットを閉じて終了する
+        # ファイルディスクリプタがリークする　？？？
         client_socket.close()
         
         
