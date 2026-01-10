@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import threading
 import socket
 
@@ -26,11 +28,11 @@ class ClientData:
             self.client_socket.sendall(message)
             return True
         except UnicodeEncodeError as e:
-            print(f'ERROR send_message/ClientData: Cannot send message)
+            print(f'ERROR send_message/ClientData: Cannot send message')
             print(f'UnicodeEncodeError: {e}')
             return False
         except Exception as e:
-            print(f'ERROR send_message/ClientData: Cannot send message)
+            print(f'ERROR send_message/ClientData: Cannot send message')
             print(f'Exception: {e}')
             return False
     
@@ -47,7 +49,7 @@ def create_server_socket(host='127.0.0.1', port=8080):
     # ソケット作成
     # AF_INET == IPv4
     # SOCK_STEAM == TCP
-    server_socket = socket.socket(socket.AFINET, socket.SOCK_STEAM)
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     
     # 再起動時にアドレスの再利用を許可
     # ソケットの設定を指定　SOL_SOCKET
