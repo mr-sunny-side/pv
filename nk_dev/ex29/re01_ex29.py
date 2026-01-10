@@ -35,13 +35,13 @@ class ClientData:
 
 
 def create_server_socket(host='127.0.0.1', port=8080):
-"""
+	"""
 	1. ソケットの作成
 	2. 再起動時にTCP通信がポートを専有しないように設定
 	3. ソケットにIPアドレスとポート番号を紐付け
 	4. 接続待ち状態にして接続キューを指定
 
-"""
+	"""
 
 	# ソケット作成
 	# AF_INET == IPv4
@@ -72,14 +72,14 @@ def broadcast(message):
 	return True
 
 def handle_client(client_socket, client_address):
-"""
+	"""
 	個別クライアントの処理
 
 	# ニックネームを受信
 	# クライアントリストに追加
 	# 参加通知を全員に送信
 
-"""
+	"""
 	global clients
 	nickname = None
 
@@ -113,9 +113,10 @@ def handle_client(client_socket, client_address):
 		pass
 
 def run_server(host='127.0.0.1', port=8080):
-"""
+	"""
 	サーバーのメインループ
-"""
+
+	"""
 
 	# ソケットの作成
 	server_socket = create_server_socket(host, port)
