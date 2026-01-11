@@ -118,7 +118,7 @@ def	handle_client(client_socket, client_address):
 			
 			# 不正・重複したニックネームを検出、再入力を促す
 			if conf_nickname(nickname) == -1:
-				error_message = 'ERROR: This nickname is Invalid or already used'
+				error_message = '/ ERROR: This nickname is Invalid or already used'
 				error_message += f'Your input: {nickname}'
 				client_socket.sendall(error_message.encode('utf-8', errors='replace'))
 				continue
@@ -129,7 +129,7 @@ def	handle_client(client_socket, client_address):
 
 		# 適格なニックネームを得てループを抜けたか検証
 		if not valid_nickname:
-			client_socket.sendall(b'ERROR: Too many attempt')
+			client_socket.sendall(b'/ ERROR: Too many attempt')
 			client_socket.sendall(b'Disconnecting...')
 			return
 		
@@ -140,7 +140,7 @@ def	handle_client(client_socket, client_address):
 		# ログインを全員に通知
 		login_message = f'/ Hello {nickname}!'
 		if not broadcast(login_message):
-			client_socket.sendall(b'Warning: Cannot send login_message')
+			client_socket.sendall(b'/ Warning: Cannot send login_message')
 			print('Warning: broadcast/handle_client: Cannot send login message')
 			print(f'Nickname: {nickname}')
 			print(f'Address: {client_address[0]}:{client_address[1]}')
@@ -163,7 +163,7 @@ def	handle_client(client_socket, client_address):
 			# チャットとしてブロードキャスト
 			chat_message = f'{nickname}: {message}'
 			if not broadcast(chat_message):
-				client_socket.sendall(b'Warning: Cannot send chat message')
+				client_socket.sendall(b'/ Warning: Cannot send chat message')
 				print('Warning broadcast/handle_client: Cannot send chat message')
 				print(f'Nickname: {nickname}')
 				print(f'Address: {client_address[0]}:{client_address[1]}')
