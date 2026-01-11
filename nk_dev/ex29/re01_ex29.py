@@ -136,11 +136,14 @@ def	handle_client(client_socket, client_address):
 		# ユーザーを辞書に追加・ニックネーム入力ループを終了
 		with lock:
 			clients[nickname] = ClientData(nickname, client_socket, client_address)
-			
+
 		# ログインを全員に通知
 		login_message = f'/ Hello {nickname}!'
 		if not broadcast(login_message):
-			client_socket.sendall(b'ERROR: Cannot send login_message')
+			client_socket.sendall(b'Warning: Cannot send login_message')
+			print('Warning: broadcast/handle_client: Cannot send login message')
+			print(f'Nickname: {nickname}')
+			print(f'Address: {client_address[0]}:{client_address[1]}')
 
 		# ユーザーが切断するまで接続を継続・メッセージをユーザーにブロードキャスト
 		while True:
@@ -150,9 +153,8 @@ def	handle_client(client_socket, client_address):
 			if not message_bytes:
 				print(f'{nickname} disconnected')
 				return
-
-			# メッセージをエンコード
-			message = message_bytes.encode('utf-8', errors='replace')
+			
+			message = message_bytes.decode('utf-8', errors='replace')
 			
 			# メッセージが空なら無視
 			if not message:
@@ -161,16 +163,22 @@ def	handle_client(client_socket, client_address):
 			# チャットとしてブロードキャスト
 			chat_message = f'{nickname}: {message}'
 			if not broadcast(chat_message):
-				client_socket.sendall(b'ERROR: Cannot send chat message')
+				client_socket.sendall(b'Warning: Cannot send chat message')
+				print('Warning broadcast/handle_client: Cannot send chat message')
+				print(f'Nickname: {nickname}')
+				print(f'Address: {client_address[0]}:{client_address[1]}')
+				
 	finally:
 		if nickname and nickname in clients:	# クライアント辞書削除の防衛
+			logout_message = f'/ {nickname} logout'	# 先にログアウトメッセージを送信
+			if broadcast(logout_message)
+				print('Warning broadcast/handle_client: Cannot send logout message')
+				print(f'Nickname: {nickname}')
+				print(f'Address: {client_address[0]}:{client_address[1]}')
 			with lock:				# 排他制御
 				del clients[nickname]	# クライアント辞書から削除
 
-		# ログアウトを全員に通知
-		logout_message = f'/ {nickname} logout'
-		broadcast(logout_message)
-
+		# クライアントソケットを閉じる
 		client_socket.close()
 
 def	run_server(host='127.0.0.1', port=8080):
