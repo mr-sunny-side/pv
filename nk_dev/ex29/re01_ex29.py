@@ -3,10 +3,12 @@
 import threading
 import socket
 
+MAX_ATTEMPTS = 5
+
 """
-	01-10: 備忘録を参照してエラーを修正
-	接続切断の主導権をユーザー側に委ねる形に修正
-	nicknameの入力に対するエラーハンドリングをもっと
+	01-11: 備忘録を参照して構築
+	 - conf_nickname関数とhandle_client関数を作成
+	
 
 	クライアントが接続したらリストを追加、
 	 切断したらリストから削除するサーバー
@@ -17,7 +19,7 @@ import socket
 clients = {}  # {socket, nickname, address} の辞書のリスト
 lock = threading.Lock()
 
-class ClientData:
+class	ClientData:
 	def __init__(self, nickname, client_socket, client_address):
 		self.nickname = nickname
 		self.client_socket = client_socket
@@ -25,8 +27,9 @@ class ClientData:
 
 	def send_message(self, message):
 		try:
-			message = message.encode('utf-8', errors='replace') if isinstance(message, str) else message
-			self.client_socket.sendall(message)
+			# messageがエンコードされてなかったらする
+			message_bytes = message.encode('utf-8', errors='replace') if isinstance(message, str) else message
+			self.client_socket.sendall(message_bytes)	# メッセージを送信
 			return True
 		except Exception as e:
 			print(f'ERROR send_message/ClientData: Cannot send message')
@@ -34,7 +37,7 @@ class ClientData:
 			return False
 
 
-def create_server_socket(host='127.0.0.1', port=8080):
+def	create_server_socket(host='127.0.0.1', port=8080):
 	"""
 	1. ソケットの作成
 	2. 再起動時にTCP通信がポートを専有しないように設定
@@ -61,17 +64,31 @@ def create_server_socket(host='127.0.0.1', port=8080):
 
 	return server_socket
 
-def broadcast(message):
-	if not isinstance(message, str):
-		print('ERROR sendall: message must be str')
-		return False
+# 不正なニックネームを検出
+def	conf_nickname(nickname):
+	# 不正なニックネームを検出
+	if not nickname or len(nickname) > 20:
+		return -1
+	# すでに使われているニックネームを検出
+	if nickname in clients:
+		return -1
+	return 0
+
+
+def	broadcast(message):
+	# messageがstr確認・必要ならエンコード
+	if isinstance(message, str):
+		message_bytes = message.encode('utf-8', errors='replace')
+
+	# 全員に対して送信ループ
 	for user in clients.keys():
-		if not clients[user].send_message(message):
+		# send_massege関数が失敗したら終了
+		if not clients[user].send_message(message_bytes):
 			print('ERROR send_massege/sendall: return False')
 			return False
 	return True
 
-def handle_client(client_socket, client_address):
+def	handle_client(client_socket, client_address):
 	"""
 	個別クライアントの処理
 
@@ -80,39 +97,57 @@ def handle_client(client_socket, client_address):
 	# 参加通知を全員に送信
 
 	"""
-	global clients
 	nickname = None
-
+	
 	try:
-		# ニックネームを受信
-		nickname = client_socket.recv(1024)
-		if not nickname:
-			print('ERROR handle_client: Cannot receive nickname')
-			return False
+		# 適格なニックネームが入力されるまでループ
+		for attempt in range(MAX_ATTEMPTS):
+			# ニックネームを受信
+			nickname_bytes = client_socket.recv(1024)
+			
+			# 切断チェック
+			if not nickname_bytes:
+				print(f'Client disconnected during nickname input {cilent_address[0]}:{client_address[1]}')
+				break
+			
+			# ニックネームをデコード
+			nickname = nickname_bytes.decode('utf-8', errors='replace')
+			
+			# 不正・重複したニックネームを検出、再入力を促す
+			if conf_nickname(nickname) == -1:
+				client_socket.sendall(b'ERROR: This nickname is Invalid or already used')
+				client_socket.sendall(fb'Your input: {nickname}')
+				continue
+			
+			# エラー検証に引っかからなければ入力ループ終了
+			break
 
-	# バイト列をデコードし、余計な入力を削除
-	nickname = nickname.decode('utf-8', errors='replace').strip()
+		# ユーザーを辞書に追加・ニックネーム入力ループを終了
+		with lock:
+			clients[nickname] = ClientData(nickname, client_socket, client_address)
+			
+		# ログインを全員に通知
+		login_message = fb'Hello {nickname}!'
+		if not broadcast(login_message)
+			
+		
+		# ユーザーが切断するまで接続を継続（継続するだけ)
+		# nickname入力時点で切断している場合のため、条件式でnickname_bytesも検証
+		while True
+			message_bytes = client_socket.recv(1024)
+			if not message_bytes or not nickname_bytes:
+				print(f'{nickname} disconnected')
+				break
 
-	# 排他制御下でクライアントデータを記録
-	with lock:
-		print(f'Login detected: {nickname}')
-		print(f'Address data: {client_address[0]}:{client_address[1]}')
-		clients[nickname] = ClientData(nickname, client_socket, client_address)
-
-	# ユーザーの接続を全ユーザーに通知
-	message = f'Hello {nickname}!'
-	if not broadcast(message):
-		print('ERROR sendall/handle_client: return False')
-
-	except Exception as e:
+	except 
 		print(f"Error: {e}")
 	finally:
-	# クライアントリストから削除
+		del clients[]
 	# 退出通知を全員に送信
 	# ソケットを閉じる
 		pass
 
-def run_server(host='127.0.0.1', port=8080):
+def	run_server(host='127.0.0.1', port=8080):
 	"""
 	サーバーのメインループ
 
@@ -125,18 +160,19 @@ def run_server(host='127.0.0.1', port=8080):
 
 	try:
 		while True:
-		# サーバーを待機状態にする
-		client_socket, client_address = server_socket.accept()
+			# サーバーを待機状態にする
+			client_socket, client_address = server_socket.accept()
+			
 
-		# スレッド作成
-		# Threadは大文字
-		client_thread = threading.Thread(
-			target=handle_client,
-			args=(client_socket, client_address),
-			daemon=True
-		)
+			# スレッド作成
+			# Threadは大文字
+			client_thread = threading.Thread(
+				target=handle_client,
+				args=(client_socket, client_address),
+				daemon=True
+			)
 
-		client_thread.start()
+			client_thread.start()
 
 
 	except KeyboardInterrupt:
