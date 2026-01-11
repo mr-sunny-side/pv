@@ -69,9 +69,11 @@ def	conf_nickname(nickname):
 	# 不正なニックネームを検出
 	if not nickname or len(nickname) > 20:
 		return -1
+
 	# すでに使われているニックネームを検出
-	if nickname in clients:
-		return -1
+	with lock:
+		if nickname in clients:
+			return -1
 	return 0
 
 
@@ -98,6 +100,7 @@ def	handle_client(client_socket, client_address):
 
 	"""
 	nickname = None
+	valid_nickname = False
 	
 	try:
 		# 適格なニックネームが入力されるまでループ
@@ -107,45 +110,68 @@ def	handle_client(client_socket, client_address):
 			
 			# 切断チェック
 			if not nickname_bytes:
-				print(f'Client disconnected during nickname input {cilent_address[0]}:{client_address[1]}')
-				break
+				print(f'Client disconnected during nickname input {client_address[0]}:{client_address[1]}')
+				return		# 関数を抜ける
 			
 			# ニックネームをデコード
-			nickname = nickname_bytes.decode('utf-8', errors='replace')
+			nickname = nickname_bytes.decode('utf-8', errors='replace').strip()
 			
 			# 不正・重複したニックネームを検出、再入力を促す
 			if conf_nickname(nickname) == -1:
-				client_socket.sendall(b'ERROR: This nickname is Invalid or already used')
-				client_socket.sendall(fb'Your input: {nickname}')
+				error_message = 'ERROR: This nickname is Invalid or already used'
+				error_message += f'Your input: {nickname}'
+				client_socket.sendall(error_message.encode('utf-8', errors='replace'))
 				continue
 			
 			# エラー検証に引っかからなければ入力ループ終了
+			valid_nickname = True	# 適格なニックネームのフラグ
 			break
 
+		# 適格なニックネームを得てループを抜けたか検証
+		if not valid_nickname:
+			client_socket.sendall(b'ERROR: Too many attempt')
+			client_socket.sendall(b'Disconnecting...')
+			return
+		
 		# ユーザーを辞書に追加・ニックネーム入力ループを終了
 		with lock:
 			clients[nickname] = ClientData(nickname, client_socket, client_address)
 			
 		# ログインを全員に通知
-		login_message = fb'Hello {nickname}!'
-		if not broadcast(login_message)
-			
-		
-		# ユーザーが切断するまで接続を継続（継続するだけ)
-		# nickname入力時点で切断している場合のため、条件式でnickname_bytesも検証
-		while True
-			message_bytes = client_socket.recv(1024)
-			if not message_bytes or not nickname_bytes:
-				print(f'{nickname} disconnected')
-				break
+		login_message = f'/ Hello {nickname}!'
+		if not broadcast(login_message):
+			client_socket.sendall(b'ERROR: Cannot send login_message')
 
-	except 
-		print(f"Error: {e}")
+		# ユーザーが切断するまで接続を継続・メッセージをユーザーにブロードキャスト
+		while True:
+			message_bytes = client_socket.recv(1024)
+			
+			# 切断チェック
+			if not message_bytes:
+				print(f'{nickname} disconnected')
+				return
+
+			# メッセージをエンコード
+			message = message_bytes.encode('utf-8', errors='replace')
+			
+			# メッセージが空なら無視
+			if not message:
+				continue
+			
+			# チャットとしてブロードキャスト
+			chat_message = f'{nickname}: {message}'
+			if not broadcast(chat_message):
+				client_socket.sendall(b'ERROR: Cannot send chat message')
 	finally:
-		del clients[]
-	# 退出通知を全員に送信
-	# ソケットを閉じる
-		pass
+		if nickname and nickname in clients:	# クライアント辞書削除の防衛
+			with lock:				# 排他制御
+				del clients[nickname]	# クライアント辞書から削除
+
+		# ログアウトを全員に通知
+		logout_message = f'/ {nickname} logout'
+		broadcast(logout_message)
+
+		client_socket.close()
 
 def	run_server(host='127.0.0.1', port=8080):
 	"""
