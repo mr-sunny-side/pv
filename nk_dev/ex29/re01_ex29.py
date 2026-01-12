@@ -7,7 +7,7 @@ MAX_ATTEMPTS = 5
 
 """
 	01-11: 備忘録を参照して構築
-	 - クライアント側の無限ループを構築
+	 - クライアント側のロジックエラー修正から
 	
 
 	クライアントが接続したらリストを追加、
@@ -174,7 +174,7 @@ def	handle_client(client_socket, client_address):
 	finally:
 		if nickname and nickname in clients:	# クライアント辞書削除の防衛
 			logout_message = f'/ {nickname} logout'	# 先にログアウトメッセージを送信
-			if broadcast(logout_message)
+			if broadcast(logout_message):
 				print('Warning broadcast/handle_client: Cannot send logout message')
 				print(f'Nickname: {nickname}')
 				print(f'Address: {client_address[0]}:{client_address[1]}')
