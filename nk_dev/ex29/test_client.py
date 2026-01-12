@@ -3,25 +3,34 @@
 import time
 import socket
 
-try:
-	# IPv4, TCP
-	# ソケット関数に上書きしない変数名にすること
-	client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# サーバーからメッセージを待つ関数(別スレッド)
+def	receive_message():
+	try:
+		while True:
+			message_bytes = client_socket.recv(1024)
 
-	# ローカルホストのhttpに接続
-	client_socket.connect(('127.0.0.1', 8080)) # ipアドレスは文字列として引数に入力
+			# 送信が空なら切断なので、プログラムを終了
+			# これは別スレッドなので、ループを抜けてもメインスレッドが動き続けてしまう
+			# なのでsys.exit(0)を明記
+			if not message_bytes:
+				print('Server closed the connection')
+				sys.exit(0)
 
-	# サーバーにバイト列を送る
-	client_socket.sendall(b'Hello　Server!\n')
+			# デコード
+			message = message_bytes.decode('utf-8', errors='replace')
+			
+			# 送信が特殊文字だけなら無視
+			if not message.strip():
+				continue
+			
+			print(message)
+	# エラーの場合システムを終了
+	except Exception as e:
+		print('ERROR receive_message: {e}')
+		sys.exit(1)
 
-	#　バッファにサーバーからの送信を保存
-	while True:
-		response = client_socket.recv(1024)
+def	
 
-	# サーバーの送信を表示
-	print(f'Server response: {response.decode("utf-8")}')
+def	main():
 
-finally:
-	# 通信が終わったらソケットを閉じる
-	client_socket.close()
-
+	
