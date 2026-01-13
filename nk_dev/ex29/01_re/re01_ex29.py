@@ -8,7 +8,7 @@ MAX_ATTEMPTS = 5
 """
 	01-11: 備忘録を参照して構築
 	 - クライアント側のロジックエラー修正から
-	
+
 
 	クライアントが接続したらリストを追加、
 	 切断したらリストから削除するサーバー
@@ -86,7 +86,7 @@ def	broadcast(message):
 	for user in clients.keys():
 		# send_massege関数が失敗したら終了
 		if not clients[user].send_message(message_bytes):
-			print('ERROR send_massege/sendall: return False')
+			print('ERROR send_message/sendall: return False')
 			return False
 	return True
 
@@ -101,28 +101,28 @@ def	handle_client(client_socket, client_address):
 	"""
 	nickname = None
 	valid_nickname = False
-	
+
 	try:
 		# 適格なニックネームが入力されるまでループ
 		for attempt in range(MAX_ATTEMPTS):
 			# ニックネームを受信
 			nickname_bytes = client_socket.recv(1024)
-			
+
 			# 切断チェック
 			if not nickname_bytes:
 				print(f'Client disconnected during nickname input {client_address[0]}:{client_address[1]}')
 				return		# 関数を抜ける
-			
+
 			# ニックネームをデコード
 			nickname = nickname_bytes.decode('utf-8', errors='replace').strip()
-			
+
 			# 不正・重複したニックネームを検出、再入力を促す
 			if conf_nickname(nickname) == -1:
-				error_message = '/ ERROR: This nickname is Invalid or already used'
+				error_message = '/ ERROR: This nickname is Invalid or already used\n'
 				error_message += f'Your input: {nickname}'
 				client_socket.sendall(error_message.encode('utf-8', errors='replace'))
 				continue
-			
+
 			# エラー検証に引っかからなければ入力ループ終了
 			valid_nickname = True	# 適格なニックネームのフラグ
 			break
@@ -132,7 +132,7 @@ def	handle_client(client_socket, client_address):
 			client_socket.sendall(b'/ ERROR: Too many attempt')
 			client_socket.sendall(b'Disconnecting...')
 			return
-		
+
 		# ユーザーを辞書に追加・ニックネーム入力ループを終了
 		with lock:
 			clients[nickname] = ClientData(nickname, client_socket, client_address)
@@ -148,18 +148,18 @@ def	handle_client(client_socket, client_address):
 		# ユーザーが切断するまで接続を継続・メッセージをユーザーにブロードキャスト
 		while True:
 			message_bytes = client_socket.recv(1024)
-			
+
 			# 切断チェック
 			if not message_bytes:
 				print(f'{nickname} disconnected')
 				return
-			
+
 			message = message_bytes.decode('utf-8', errors='replace')
-			
+
 			# メッセージが空なら無視
 			if not message:
 				continue
-			
+
 			# チャットとしてブロードキャスト
 			chat_message = f'{nickname}: {message}'
 			if not broadcast(chat_message):
@@ -174,7 +174,7 @@ def	handle_client(client_socket, client_address):
 	finally:
 		if nickname and nickname in clients:	# クライアント辞書削除の防衛
 			logout_message = f'/ {nickname} logout'	# 先にログアウトメッセージを送信
-			if broadcast(logout_message):
+			if not broadcast(logout_message):
 				print('Warning broadcast/handle_client: Cannot send logout message')
 				print(f'Nickname: {nickname}')
 				print(f'Address: {client_address[0]}:{client_address[1]}')
@@ -199,11 +199,11 @@ def	run_server(host='127.0.0.1', port=8080):
 		while True:
 			# サーバーを待機状態にする
 			client_socket, client_address = server_socket.accept()
-			
-			
+
+
 			# クライアントにメッセージを送る
 			client_socket.sendall(b'Hello Client !')
-			
+
 			# スレッド作成
 			# Threadは大文字
 			client_thread = threading.Thread(
@@ -219,10 +219,7 @@ def	run_server(host='127.0.0.1', port=8080):
 		print('Shutting down server...')
 	finally:
 		server_socket.close()
-		print('Servser stopped')
+		print('Server stopped')
 
 if __name__ == "__main__":
 	run_server()
-
-
-
