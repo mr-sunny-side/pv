@@ -200,7 +200,10 @@ def	run_server(host='127.0.0.1', port=8080):
 			# サーバーを待機状態にする
 			client_socket, client_address = server_socket.accept()
 			
-
+			
+			# クライアントにメッセージを送る
+			client_socket.sendall(b'Hello Client !')
+			
 			# スレッド作成
 			# Threadは大文字
 			client_thread = threading.Thread(
