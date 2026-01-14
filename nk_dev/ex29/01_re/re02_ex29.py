@@ -9,8 +9,6 @@ import socket
 import threading
 
 MAX_ATTEMPT = 5
-# スレッド間のシステム終了フラグ
-shutdown_flag = threading.Event()
 
 clients = {}
 lock = threading.Lock()

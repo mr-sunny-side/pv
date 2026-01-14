@@ -9,17 +9,24 @@ import socket
 
 """
 
+# スレッド間のシステム終了フラグ
+shutdown_flag = threading.Event()
+
 # サーバーからのメッセージを受信するサブスレッド関数
 # サブスレッドなのでループは関数内で行う
 def	receive_message(client_socket):
 	# サーバーからのメッセージを受信
 	try:
-		while True:
+		# フラグがfalseな限り継続
+		while not shutdown_flag.is_set():
 			message_bytes = client_socket.recv(1024)
 
 			# 受信が空ならサーバー切断とみなしプログラムを終了
 			if not message_bytes:
-				sys.exit(0)
+				print('Warning: Server disconnected')
+				shutdown_flag.set()
+				break
+
 
 			# メッセージをデコード・strip()して空なら無視
 			message = message_bytes.decode('utf-8', errors='replace').strip()
@@ -29,32 +36,42 @@ def	receive_message(client_socket):
 			# 受信したメッセージを出力
 			print(f'\n/ {message}\nYou: ', end='', flush=True)
 
+		return
+
 	except Exception as e:
 		print(f'ERROR receive_message: {e}')
-		sys.exit(1)
+		shutdown_flag.set()
 
 # サーバーにメッセージを送信
 def	send_message(client_socket):
 	try:
-		while True:
+		while not shutdown_flag.is_set():
+			# この関数に入るとフラグが立っても抜けられない
 			message = input()
 
 			# stripしてメッセージが空文字なら無視
 			if not message.strip():
 				continue
 
+			# exit入力で切断
 			if message.strip() == 'exit':
 				print('Disconnecting...')
-				return
+				shutdown_flag.set()
+				break
 
-			client_socket.sendall(message.encode('utf-8', errors='replace'))
+			# 送信時点でサーバーが閉じている可能性がある
+			try:
+				client_socket.sendall(message.encode('utf-8', errors='replace'))
+			except:
+				# 送信が失敗した場合、サーバーが切断しているとみなし、フラグをたてる
+				shutdown_flag.set()
 
 	except KeyboardInterrupt:
 		print('Disconnecting...')
-		return
+		shutdown_flag.set()
 	except Exception as e:
 		print(f'ERROR send_message: {e}')
-		return
+		shutdown_flag.set()
 
 def	main(host='127.0.0.1', port=8080):
 
