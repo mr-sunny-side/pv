@@ -1,8 +1,7 @@
 #!/usr/bin/env	python3
 
 """
-	01-13: handle_client関数の第二段階まで記述
-		第三段階から
+
 """
 
 import sys
@@ -12,7 +11,7 @@ import threading
 MAX_ATTEMPT = 5
 
 clients = {}
-lock = threading.lock()
+lock = threading.Lock()
 
 class ClientData:
 	# ニックネーム、ソケット、アドレスを保存
@@ -40,7 +39,7 @@ def	create_server_socket(host='127.0.0.1', port=8080):
 	server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 	# 再起動時にアドレスの再利用を許可
-	server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR)
+	server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
 	# IPアドレスとポートを紐付ける
 	server_socket.bind((host, port))
@@ -120,21 +119,37 @@ def	process_nickname(client_socket) -> str | None:
 
 	return nickname
 
+# メッセージ受信プロセス関数
+# 切断・エラー時はFalse、次のループへ行くならTrue
+def	receive_message(nickname, client_socket) -> bool:
+	message_bytes = client_socket.recv(1024)
 
+	# バイト列が空なら切断と判断
+	if not message_bytes:
+		return False
 
+	# メッセージをデコード・空文字なら次のループへ
+	message = message_bytes.decode('utf-8', errors='replace').strip()
+	if not message:
+		return True
 
+	# メッセージをブロードキャスト
+	message = f'{nickname}: {message}\n'
+	if not broadcast(message):
+		return False
+
+	return True
 
 def	handle_client(client_socket, client_address):
 	global	clients
 
 	try:
+		# 1. 適格なニックネームの確認・ニックネーム作成ができなかった場合終了
 		nickname = process_nickname(client_socket)
-
-		# ニックネーム作成ができなかった場合終了
 		if not nickname:
 			return
 
-		# 排他制御下でclientオブジェクトを作成
+		# 2. 排他制御下でclientオブジェクトを作成
 		with lock:
 			clients[nickname] = ClientData(nickname, client_socket, client_address)
 
@@ -142,3 +157,67 @@ def	handle_client(client_socket, client_address):
 		login_message = f'Say hello to {nickname} !\n'
 		if not broadcast(login_message):
 			return
+
+		# 3. メッセージ受信ループ
+		while True:
+			# クライアント切断・ブロードキャスト失敗時は終了
+			if not receive_message(nickname, client_socket):
+				return
+			# 問題がなければ受信待ちへ戻る
+			else:
+				continue
+
+	except Exception as e:
+		print(f'ERROR handle_client: {e}')
+		return
+	finally:
+		# クライアント辞書に存在を確認し、排他制御下でクライアントデータを削除
+		if nickname in clients:
+			with lock:
+				del clients[nickname]
+				print(f'{nickname} logout')
+
+				message = f'{nickname} logout\n'
+				broadcast(message)
+
+		# クライアントソケットを閉じる
+		try:
+			client_socket.close()
+		except:
+			pass
+
+# サーバーのメイン関数
+def	run_server(host='127.0.0.1', port=8080):
+
+	# ソケットを作成
+	server_socket = create_server_socket(host, port)
+	print(f'Server listening {host}:{port}')
+	print('Press Ctrl + C to stop')
+	print()
+
+	try:
+		# 接続待ちループ
+		while True:
+			# クライアントに接続
+			client_socket, client_address = server_socket.accept()
+			print(f'run_server: client detected {client_address[0]}:{client_address[1]}')
+
+			client_thread = threading.Thread(
+				target=handle_client,
+				args=(client_socket, client_address),
+				daemon=True
+			)
+
+			client_thread.start()
+
+	except KeyboardInterrupt:
+		print('run_server: shuting down server')
+	finally:
+		try:
+			server_socket.close()
+		except:
+			pass
+		print('Server stopped')
+
+if __name__ == '__main__':
+	run_server()
