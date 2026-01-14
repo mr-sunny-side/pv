@@ -392,6 +392,205 @@ def send_message(client_socket):
 
 ---
 
+## 補足: ソケットオブジェクトの仕組み
+
+### ソケットは「共有」されているのか？
+
+結論: **はい、共有されています**が、理解するにはいくつかの層があります。
+
+#### 1. client_socket変数の中身
+
+```python
+client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client_socket.connect(('127.0.0.1', 8080))
+
+print(type(client_socket))  # <class 'socket.socket'>
+print(client_socket.fileno())  # 例: 3 (ファイルディスクリプタ番号)
+```
+
+**client_socketの中身:**
+- **Pythonオブジェクト**: `socket.socket`クラスのインスタンス
+- **ファイルディスクリプタ**: OS が管理するネットワーク接続への「整数の ID」
+  - 例: `3`, `4`, `5` など
+- **接続情報**: IPアドレス、ポート番号、接続状態
+
+#### 2. スレッド間での共有の仕組み
+
+```python
+def main():
+    client_socket = socket.socket(...)  # ← ソケットを作成
+    client_socket.connect((host, port))
+
+    # このclient_socketを2つのスレッドに渡す
+    receive_thread = threading.Thread(
+        target=receive_message,
+        args=(client_socket,)  # ← 引数として渡す
+    )
+    receive_thread.start()
+
+    send_message(client_socket)  # ← 引数として渡す
+```
+
+**何が共有されているか:**
+
+```
+┌─────────────────────────────────────────┐
+│         メモリ空間（プロセス）           │
+│                                         │
+│  client_socket（Pythonオブジェクト）     │
+│  ┌──────────────────────────┐          │
+│  │ fileno: 3               │          │
+│  │ family: AF_INET         │          │
+│  │ type: SOCK_STREAM       │          │
+│  │ 接続先: 127.0.0.1:8080  │          │
+│  └──────────────────────────┘          │
+│         ↑           ↑                  │
+│         │           │                  │
+│    receive_     send_message           │
+│    message      スレッド               │
+│    スレッド                             │
+│    (参照)        (参照)                 │
+└─────────────────────────────────────────┘
+         ↓
+┌─────────────────────────────────────────┐
+│         OS レベル                       │
+│                                         │
+│  ファイルディスクリプタテーブル           │
+│  ┌────────────────────────┐            │
+│  │ FD 3: TCP接続          │            │
+│  │  ↓                     │            │
+│  │  実際のネットワーク接続 │            │
+│  └────────────────────────┘            │
+└─────────────────────────────────────────┘
+```
+
+**重要なポイント:**
+- **Python側**: 両方のスレッドが**同じオブジェクト**を参照
+- **OS側**: 両方のスレッドが**同じファイルディスクリプタ**（同じネットワーク接続）を使用
+
+### なぜサブスレッドでclose()する必要があるのか？
+
+#### 問題: フラグだけでは不十分
+
+```python
+# サブスレッド（receive_message）
+if not message_bytes:
+    shutdown_flag.set()  # フラグを立てる
+    # ← ここでclose()しないとどうなる？
+```
+
+```python
+# メインスレッド（send_message）
+while not shutdown_flag.is_set():
+    if select.select([sys.stdin], [], [], 0.5)[0]:
+        message = input('You: ')  # ← ここでブロック中
+        # フラグをチェックできない！
+```
+
+**問題点:**
+- `input()`は入力があるまで**永遠に待つ**
+- `select`でタイムアウトしても、`input()`に入ると抜けられない
+- フラグは立っているが、メインスレッドがチェックできない
+
+#### 解決: ソケットをclose()する
+
+```python
+# サブスレッド（receive_message）
+if not message_bytes:
+    shutdown_flag.set()
+    client_socket.close()  # ← ソケットを閉じる！
+```
+
+**何が起きるか:**
+
+1. **サブスレッドが`close()`を呼ぶ**
+   ```python
+   client_socket.close()
+   ```
+
+2. **OS がファイルディスクリプタを閉じる**
+   - ネットワーク接続が切断される
+   - ファイルディスクリプタが無効になる
+
+3. **メインスレッドの`sendall()`がエラーになる**
+   ```python
+   # メインスレッドで実行中
+   client_socket.sendall(message.encode('utf-8'))
+   # ↓
+   # OSError: [Errno 9] Bad file descriptor
+   # または
+   # OSError: [Errno 32] Broken pipe
+   ```
+
+4. **例外をキャッチして終了**
+   ```python
+   try:
+       client_socket.sendall(message.encode('utf-8'))
+   except:
+       shutdown_flag.set()  # エラーなので終了
+       break
+   ```
+
+#### 視覚的な説明
+
+```
+時間軸:
+
+[サブスレッド]              [メインスレッド]
+    │                           │
+    │ recv() → 空               │
+    │ shutdown_flag.set()       │
+    │ client_socket.close() ────┼─→ ソケットが閉じられる
+    │                           │
+    │                           │ input() 待機中...
+    │                           │ （ユーザーが何か入力）
+    │                           │ sendall() を呼ぶ
+    │                           │   ↓
+    │                           │ エラー発生！
+    │                           │ 例外をキャッチ
+    │                           │ ループ終了
+    │                           │
+    └──────────── 両方のスレッドが終了 ────────┘
+```
+
+### close()しないとどうなるか？
+
+```python
+# BAD: close()を呼ばない
+if not message_bytes:
+    shutdown_flag.set()
+    # client_socket.close()  ← これを忘れた
+```
+
+**結果:**
+- サブスレッドは終了する
+- メインスレッドは`input()`で永遠に待ち続ける
+- ユーザーが何か入力しない限り終了しない
+- `sendall()`は成功するが、サーバーはもういないので意味がない
+
+### まとめ
+
+**質問への答え:**
+
+1. **ソケットは共有されているか？**
+   - **はい**。両方のスレッドが同じPythonオブジェクト、同じOSレベルのファイルディスクリプタを参照
+
+2. **なぜサブスレッドでclose()するのか？**
+   - ソケットを閉じることで、メインスレッドの`sendall()`をエラーにして終了させるため
+   - フラグだけではメインスレッドが`input()`でブロックしている場合に気づけない
+
+3. **client_socketの中身は？**
+   - Pythonの`socket.socket`オブジェクト
+   - ファイルディスクリプタ番号（OSが管理する整数ID）
+   - 接続情報（IP、ポート、状態）
+
+**重要な原則:**
+- **ソケットは共有リソース**: 一方のスレッドが閉じると、両方のスレッドに影響する
+- **これは意図的**: 一方のスレッドが終了を検知したら、もう一方も強制的に終了させたい
+- **エラーを使った同期**: ソケットをcloseすることで、もう一方のスレッドにエラーを発生させて通知する
+
+---
+
 ## 学習のポイント
 
 ### マルチスレッドプログラミングの難しさ
