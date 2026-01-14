@@ -1,4 +1,4 @@
-#!/usr/bin/env	python3
+#!/usr/bin/env python3
 
 """
 
@@ -111,7 +111,8 @@ def	process_nickname(client_socket) -> str | None:
 			break
 
 	# 試行回数を超過したら終了
-	if attempt > MAX_ATTEMPT:
+	# rangeはインデックスで数えているので注意
+	if attempt >= MAX_ATTEMPT - 1:
 		message = 'ERROR: Too many attempt\n'
 		message += 'Disconnecting...\n'
 		client_socket.sendall(message.encode('utf-8', errors='replace'))

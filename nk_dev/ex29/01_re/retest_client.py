@@ -1,4 +1,4 @@
-#!/usr/bin/env	python3
+#!/usr/bin/env python3
 
 import sys
 import threading
@@ -27,7 +27,7 @@ def	receive_message(client_socket):
 				continue
 
 			# 受信したメッセージを出力
-			print(f'/ {message}\n')
+			print(f'\n/ {message}\nYou: ', end='', flush=True)
 
 	except Exception as e:
 		print(f'ERROR receive_message: {e}')
@@ -37,7 +37,7 @@ def	receive_message(client_socket):
 def	send_message(client_socket):
 	try:
 		while True:
-			message = input('You: ')
+			message = input()
 
 			# stripしてメッセージが空文字なら無視
 			if not message.strip():

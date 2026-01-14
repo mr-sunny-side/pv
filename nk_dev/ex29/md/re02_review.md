@@ -113,7 +113,7 @@ You: / Warning...
 - サブスレッド(受信スレッド)が`print()`を実行
 - ターミナルのカーソル位置が制御されていない
 
-#### 解決策1: シンプルな改行追加
+#### 解決策: シンプルな改行追加
 
 **receive_message関数の修正:**
 ```python
@@ -142,112 +142,10 @@ def receive_message(client_socket):
 
 **デメリット:**
 - 入力中の文字列が消える
-- 完全な解決にはならない
+- 完全な解決ではないが、実用上は問題ない
 
-#### 解決策2: prompt_toolkitの使用（推奨）
-
-**必要なインストール:**
-```bash
-pip install prompt_toolkit
-```
-
-**実装例:**
-```python
-#!/usr/bin/env python3
-
-import sys
-import threading
-import socket
-from prompt_toolkit import PromptSession
-from prompt_toolkit.patch_stdout import patch_stdout
-
-def receive_message(client_socket):
-    try:
-        while True:
-            message_bytes = client_socket.recv(1024)
-
-            if not message_bytes:
-                print('\n/ Server disconnected')
-                sys.exit(0)
-
-            message = message_bytes.decode('utf-8', errors='replace').strip()
-            if not message:
-                continue
-
-            # prompt_toolkitが自動的に入力行を保持
-            print(f'/ {message}')
-    except Exception as e:
-        print(f'ERROR receive_message: {e}')
-        sys.exit(1)
-
-def send_message(client_socket):
-    session = PromptSession()
-    try:
-        # patch_stdout()で標準出力を制御
-        with patch_stdout():
-            while True:
-                message = session.prompt('You: ')
-
-                if not message.strip():
-                    continue
-
-                if message.strip() == 'exit':
-                    print('Disconnecting...')
-                    return
-
-                client_socket.sendall(message.encode('utf-8', errors='replace'))
-    except KeyboardInterrupt:
-        print('Disconnecting...')
-        return
-    except Exception as e:
-        print(f'ERROR send_message: {e}')
-        return
-
-def main(host='127.0.0.1', port=8080):
-    nickname = None
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-    print('Connecting...')
-    client_socket.connect((host, port))
-    print('Connected !')
-
-    try:
-        while not nickname:
-            nickname = input('Enter your nickname: ')
-            if not nickname.strip():
-                print('Warning: Nickname cannot be empty')
-                continue
-
-        client_socket.sendall(nickname.encode('utf-8', errors='replace'))
-
-        receive_thread = threading.Thread(
-            target=receive_message,
-            args=(client_socket,),
-            daemon=True
-        )
-
-        receive_thread.start()
-        send_message(client_socket)
-    except Exception as e:
-        print(f'ERROR main: {e}')
-        sys.exit(1)
-    finally:
-        try:
-            client_socket.close()
-        except:
-            pass
-
-if __name__ == '__main__':
-    main()
-```
-
-**メリット:**
-- 入力中の文字列が保持される
-- プロフェッショナルなUI
-- カーソル位置が適切に制御される
-
-**デメリット:**
-- 外部ライブラリが必要
+**補足:**
+より高度な解決策として`prompt_toolkit`ライブラリを使う方法もありますが、学習目的であれば上記のシンプルな方法で十分です
 
 ---
 
@@ -277,9 +175,31 @@ def receive_message(client_socket):
 3. デーモンスレッドから`sys.exit()`を呼んでも、**メインスレッドは終了しない**
 4. `input()`は何かが入力されるまで永遠に待ち続ける
 
-#### 解決策1: 共有フラグを使用（推奨）
+#### 解決策: threading.Event()とselect.select()を使用（推奨）
 
-**完全な実装例:**
+この解決策では2つの重要なライブラリを使います：
+
+**1. `threading.Event()` - スレッド間の終了フラグ**
+```python
+shutdown_flag = threading.Event()  # 終了フラグを作成
+
+# フラグの使い方
+shutdown_flag.set()       # フラグを立てる（終了を通知）
+shutdown_flag.is_set()    # フラグが立っているか確認（True/False）
+shutdown_flag.clear()     # フラグをクリア（再利用時）
+```
+
+**2. `select.select()` - タイムアウト付き入力待機**
+```python
+# 0.5秒ごとにタイムアウトしてフラグをチェックできる
+if select.select([sys.stdin], [], [], 0.5)[0]:
+    message = input('You: ')  # 入力可能な場合のみ実行
+```
+
+これにより、`input()`で永遠に待つのではなく、0.5秒ごとに`shutdown_flag`をチェックできます。
+
+#### 完全な実装例
+
 ```python
 #!/usr/bin/env python3
 
@@ -387,177 +307,88 @@ if __name__ == '__main__':
     main()
 ```
 
-**ポイント:**
-- `threading.Event()`で全スレッド間で終了フラグを共有
-- `select.select()`で定期的にフラグをチェックしながら入力待ち
-- ソケットを閉じることで他のスレッドも確実に終了
+#### コードの重要ポイント解説
 
-#### 解決策2: 非デーモンスレッド + ソケットクローズ
-
-**シンプルな実装:**
+**1. 終了フラグの共有**
 ```python
-def receive_message(client_socket):
-    try:
-        while True:
-            message_bytes = client_socket.recv(1024)
+shutdown_flag = threading.Event()  # グローバルに定義
+```
+- すべてのスレッド（receive_message、send_message）から同じフラグを参照
+- どのスレッドからでも`shutdown_flag.set()`で終了を通知できる
 
-            if not message_bytes:
-                print('\n/ Server disconnected. Press Enter to exit.')
-                # ソケットを閉じる
-                client_socket.shutdown(socket.SHUT_RDWR)
-                client_socket.close()
-                # プロセス全体を終了
-                import os
-                os._exit(0)
+**2. receive_message関数のポイント**
+```python
+while not shutdown_flag.is_set():  # フラグをチェック
+    message_bytes = client_socket.recv(1024)
 
-            message = message_bytes.decode('utf-8', errors='replace').strip()
-            if not message:
-                continue
-
-            print(f'\n/ {message}\nYou: ', end='', flush=True)
-    except Exception as e:
-        print(f'\nERROR receive_message: {e}')
-        import os
-        os._exit(1)
-
-# メイン関数内
-receive_thread = threading.Thread(
-    target=receive_message,
-    args=(client_socket,),
-    daemon=False  # ← デーモンではなく通常スレッドに
-)
+    if not message_bytes:
+        shutdown_flag.set()  # サーバー切断時にフラグを立てる
+        client_socket.close()  # ソケットを閉じる
+        break
 ```
 
-**注意:**
-- `os._exit()`は強制終了なのでクリーンアップされない
-- 学習目的なら問題ないが、本番環境では推奨されない
+**3. send_message関数のポイント**
+```python
+while not shutdown_flag.is_set():
+    # 0.5秒ごとにタイムアウトして、フラグをチェックできる
+    if select.select([sys.stdin], [], [], 0.5)[0]:
+        message = input('You: ')
+        # ... 入力処理
+```
+- `select.select()`で0.5秒ごとにタイムアウト
+- タイムアウトするたびにループの先頭で`shutdown_flag`をチェック
+- サーバーが切断されていたら最大0.5秒でループを抜ける
 
-#### 解決策3: prompt_toolkit + shutdown_flag（最も推奨）
+**4. main関数のポイント**
+```python
+receive_thread.start()
+send_message(client_socket)  # ブロッキング
+
+# send_message終了後、receive_threadの終了を待つ
+receive_thread.join(timeout=1.0)
+```
+
+#### selectを使わない簡単な代替案
+
+`select`が難しい場合は、この方法もあります:
 
 ```python
-#!/usr/bin/env python3
-
-import sys
-import threading
-import socket
-from prompt_toolkit import PromptSession
-from prompt_toolkit.patch_stdout import patch_stdout
-
-shutdown_flag = threading.Event()
-
 def receive_message(client_socket):
-    try:
-        while not shutdown_flag.is_set():
-            message_bytes = client_socket.recv(1024)
+    while not shutdown_flag.is_set():
+        message_bytes = client_socket.recv(1024)
 
-            if not message_bytes:
-                print('/ Server disconnected')
-                shutdown_flag.set()
-                client_socket.close()
-                break
-
-            message = message_bytes.decode('utf-8', errors='replace').strip()
-            if not message:
-                continue
-
-            print(f'/ {message}')
-    except Exception as e:
-        if not shutdown_flag.is_set():
-            print(f'ERROR receive_message: {e}')
+        if not message_bytes:
+            print('\n/ Server disconnected. Type anything and press Enter to exit.')
             shutdown_flag.set()
-            client_socket.close()
+            break
+
+        message = message_bytes.decode('utf-8', errors='replace').strip()
+        if message:
+            print(f'\n/ {message}\nYou: ', end='', flush=True)
 
 def send_message(client_socket):
-    session = PromptSession()
-    try:
-        with patch_stdout():
-            while not shutdown_flag.is_set():
-                try:
-                    # タイムアウト付きプロンプト
-                    message = session.prompt('You: ', timeout=0.5)
-                except:
-                    # タイムアウトまたはエラー
-                    if shutdown_flag.is_set():
-                        break
-                    continue
-
-                if not message.strip():
-                    continue
-
-                if message.strip() == 'exit':
-                    print('Disconnecting...')
-                    shutdown_flag.set()
-                    break
-
-                try:
-                    client_socket.sendall(message.encode('utf-8', errors='replace'))
-                except:
-                    shutdown_flag.set()
-                    break
-    except KeyboardInterrupt:
-        print('Disconnecting...')
-        shutdown_flag.set()
-    except Exception as e:
-        if not shutdown_flag.is_set():
-            print(f'ERROR send_message: {e}')
-            shutdown_flag.set()
-
-def main(host='127.0.0.1', port=8080):
-    nickname = None
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-    print('Connecting...')
-    client_socket.connect((host, port))
-    print('Connected !')
-
-    try:
-        while not nickname:
-            nickname = input('Enter your nickname: ')
-            if not nickname.strip():
-                print('Warning: Nickname cannot be empty')
-                continue
-
-        client_socket.sendall(nickname.encode('utf-8', errors='replace'))
-
-        receive_thread = threading.Thread(
-            target=receive_message,
-            args=(client_socket,),
-            daemon=True
-        )
-
-        receive_thread.start()
-        send_message(client_socket)
-
-        receive_thread.join(timeout=1.0)
-    except Exception as e:
-        print(f'ERROR main: {e}')
-    finally:
-        shutdown_flag.set()
+    while not shutdown_flag.is_set():
         try:
-            client_socket.close()
-        except:
-            pass
-        print('Disconnected')
+            message = input('You: ')
 
-if __name__ == '__main__':
-    main()
+            # 入力後にフラグをチェック
+            if shutdown_flag.is_set():
+                break
+
+            if message.strip() == 'exit':
+                shutdown_flag.set()
+                break
+
+            if message.strip():
+                client_socket.sendall(message.encode('utf-8'))
+        except:
+            break
 ```
 
-**メリット:**
-- UI問題とサーバー切断問題を両方解決
-- プロフェッショナルな実装
-
----
-
-## 比較表
-
-| 解決策 | 実装難易度 | UI品質 | 終了処理 | 推奨度 |
-|--------|-----------|--------|----------|--------|
-| シンプル改行 | 低 | 中 | 不完全 | ★★☆☆☆ |
-| select + フラグ | 中 | 中 | 完全 | ★★★★☆ |
-| os._exit() | 低 | 低 | 強制終了 | ★★☆☆☆ |
-| prompt_toolkit単体 | 中 | 高 | 不完全 | ★★★☆☆ |
-| prompt_toolkit + フラグ | 高 | 高 | 完全 | ★★★★★ |
+**特徴:**
+- `select`不要でシンプル
+- サーバー切断時は「何か入力してEnter」で終了
+- 完璧ではないが、学習目的には十分
 
 ---
 
