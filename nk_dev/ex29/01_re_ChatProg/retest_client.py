@@ -5,7 +5,9 @@ import threading
 import socket
 
 """
-	01-14: サーバー側が接続を切ってもシステムが終了しないバグを修正
+	01-14:	完成
+			設計上、サーバーが接続を切ると警告を出した後、input()で待つ状態となる
+
 
 """
 
@@ -23,7 +25,7 @@ def	receive_message(client_socket):
 
 			# 受信が空ならサーバー切断とみなしプログラムを終了
 			if not message_bytes:
-				print('Warning: Server disconnected')
+				print('\nWarning: Server disconnected')
 				shutdown_flag.set()
 				break
 
