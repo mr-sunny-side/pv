@@ -169,6 +169,13 @@ def run_server(host='127.0.0.1', port=8080):
 			client_socket, client_address = server_socket.accept()
 			print(f'run_server: Connection detected {client_address[0]}:{client_address[1]}')
 
+			# 正常終了のレスポンスを送信
+			response = b'HTTP/1.1 200 OK\r\n'
+			response += b'Content-Type: text/plane\r\n'
+			response += b'\r\n'
+			response += b'Hello Client !\n'
+			client_socket.sendall(response)
+
 			# handle_clientスレッド
 			client_thread = threading.Thread(
 				target=handle_client,
