@@ -21,65 +21,53 @@ class RequestData:
 		self.version = None
 		self.header = {}
 
-	def	process_parse_request(self, request):
-		lines = request.split('\r\n')
 
-		self.method, self.path, self.version = self.parse_http_line(lines[0])
-		if not self.method:
-			print('ERROR process_parse_request/RequestData: parse_http_line returned None', file=sys.stderr)
+	# httpリクエストをパースする関数
+	def	parse_http(self, http_line):
+		parts = http_line.split()
+
+		if len(parts) != 3:
 			return False
 
-		# ヘッダーを保存
-		for i in range(1, len(lines)):
-			# ヘッダーが終了したらループ終了
-			if not lines[i].strip():
-				break
-			header_label, header_detail = self.parse_header(lines[i])
-			if not header_label:
-				print('ERROR process_parse_request/RequestData: parse_header returned None', file=sys.stderr)
-				return False
-
-			self.header[header_label] = header_detail
+		self.method = parts[0]
+		self.path = parts[1]
+		self.version = parts[2]
 
 		return True
 
-	# httpリクエストをパースする関数
-	def	parse_http_line(self, http_line):
-		try:
-			parts = http_line.split()
-
-			method = parts[0]
-			path = parts[1]
-			version = parts[2]
-
-			return method, path, version
-		except IndexError:
-			print(f'ERROR parse_http_line/RequestData: Index error', file=sys.stderr)
-			return None, None, None
-
 	# ヘッダー情報を行ごとにパースする関数
-	def	parse_header(self, header_line):
+	def	parse_header(self, header_lines):
+		for line in header_lines:
+			if not line.strip():	# 空行なら終了
+				break
+			if ':' in line:			# コロンがあったらパース
+				key, value = line.split(':', 1)
+
+			self.header[key.strip()] = value.strip()	# パースしたヘッダーを辞書に保存
+
+	# リクエスト全体のパースエラーを捕捉する関数
+	def	parse_request(self, request):
+		lines = request.split('\r\n')
+
 		try:
-			parts = header_line.split(':', 1)
+			if not self.parse_http(lines[0]):	# httpリクエストがパースできなければエラーを吐く
+				raise ValueError
 
-			header_label = parts[0]
-			header_detail = parts[1]
-
-			return header_label, header_detail
-		except IndexError:
-			print('ERROR parse_header/RequestData: Index error', file=sys.stderr)
-			return None, None
+			# ヘッダーを保存
+			self.parse_header(lines[1:])
+			return True
+		except ValueError as e:
+				print(f'ERROR parse_request: {e}')
+				return
 
 def	create_html(path):
 
 	response = b'HTTP/1.1 200 OK\r\n'
-	response += b'Content-Type: text/html charset=utf-8\r\n'
-	response += b'Connection: close\r\n'
-	response += b'\r\n'
+	response += b'Content-Type: text/html; charset=utf-8\r\n'
 
 	if path == '/' or path == '/index.html':
 		html = """<!DOCTYPE html>
-		<html lang=ja>
+		<html lang="ja">
 		<head>
 			<meta charset="utf-8">
 			<title>Welcome</title>
@@ -94,14 +82,22 @@ def	create_html(path):
 				<li>/test</li>
 			</ul>
 		</body>
+		</html>
 		"""
 
+		# コンテンツの長さはエンコード後に増えることに留意
+
+		html_length = len(html.encode('utf-8', errors='replace'))
+		content_length = f'Content-Length: {html_length}\r\n'
+
+		response += content_length.encode('utf-8', errors='replace')
+		response += b'\r\n'
 		response += html.encode('utf-8', errors='replace')
 		return response
 
 	elif path == '/about':
 		html = """<!DOCTYPE html>
-		<html lang=ja>
+		<html lang="ja">
 		<head>
 			<meta charset="utf-8">
 			<title>About</title>
@@ -115,16 +111,23 @@ def	create_html(path):
 				<li>HTTPリクエストに対するレスポンス</li>
 			</ul>
 		</body>
+		</html>
 		"""
 
+		html_length = len(html.encode('utf-8', errors='replace'))
+		content_length = f'Content-Length: {html_length}\r\n'
+
+		response += content_length.encode('utf-8', errors='replace')
+		response += b'\r\n'
 		response += html.encode('utf-8', errors='replace')
 		return response
+
 
 	elif path == '/time':
 		current_time = datetime.now().strftime('%Y-%m-%d')
 
 		html = f"""<!DOCTYPE html>
-		<html lang=ja>
+		<html lang="ja">
 		<head>
 			<meta charset="utf-8">
 			<title>Current time</title>
@@ -134,19 +137,23 @@ def	create_html(path):
 			<p>現在のサーバー時間を表示します</p>
 			<p>{current_time}</p>
 		</body>
+		</html>
 		"""
 
+		html_length = len(html.encode('utf-8', errors='replace'))
+		content_length = f'Content-Length: {html_length}\r\n'
+
+		response += content_length.encode('utf-8', errors='replace')
+		response += b'\r\n'
 		response += html.encode('utf-8', errors='replace')
 		return response
 
 	else:
 		response = b'HTTP/1.1 404 Not Found\r\n'
-		response += b'Content-Type: text/html charset=utf-8\r\n'
-		response += b'Connection: close\r\n'
-		response += b'\r\n'
+		response += b'Content-Type: text/html; charset=utf-8\r\n'
 
 		html = """<!DOCTYPE html>
-		<html lang=ja>
+		<html lang="ja">
 		<head>
 			<meta charset="utf-8">
 			<title>404 Not Found</title>
@@ -155,10 +162,18 @@ def	create_html(path):
 			<h1>404 Not Found</h1>
 			<p>そのパスのページは存在しません</p>
 		</body>
+		</html>
 		"""
 
+		html_length = len(html.encode('utf-8', errors='replace'))
+		content_length = f'Content-Length: {html_length}\r\n'
+
+		response += content_length.encode('utf-8', errors='replace')
+		response += b'\r\n'
 		response += html.encode('utf-8', errors='replace')
 		return response
+
+
 
 def	handle_client(client_socket, client_address):
 	global client_count
@@ -170,8 +185,8 @@ def	handle_client(client_socket, client_address):
 		# リクエストデータをブジェクトとして保存
 		# 失敗したら関数を終了
 		request_data = RequestData()
-		if not request_data.process_parse_request(request):
-			print('ERROR process_parse_request/handle_client: returned error', file=sys.stderr)
+		if not request_data.parse_request(request):
+			print('ERROR parse_request/handle_client: returned error', file=sys.stderr)
 			return
 
 		# クライアントIDを付与
@@ -186,9 +201,11 @@ def	handle_client(client_socket, client_address):
 
 		client_socket.sendall(response)
 	except Exception as e:
-		print(f'Connection [{client_id}]: {e}', file=sys.stderr)
+		error_id = client_id if client_id else ''	# クライアントID付与後のエラーならエラーIDとして出力
+
+		print(f'Connection [{error_id}]: {e}', file=sys.stderr)
 		response = b'HTTP/1.1 500 Internal Server Error\r\n'
-		response += b'Content-Type: text\r\n'
+		response += b'Content-Type: text/plain\r\n'
 		response += b'Connection: close\r\n'
 		response += b'\r\n'
 		response += b'Server Error 500'
