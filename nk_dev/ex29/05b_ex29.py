@@ -195,6 +195,14 @@ def	handle_client(client_socket):
 
 	except ValueError as e:
 		print(f'ERROR handle_client: {e}')
+
+		error_response = b'HTTP/1.1 500 Internal Server Error\r\n'
+		error_response += b'Content-Type: text/plain\r\n'
+		error_response += b'Connection: close'
+		error_response += b'\r\n'
+		error_response += b'500 Internal Server Error\n'
+
+		client_socket.sendall(error_response)
 	finally:
 		client_socket.close()
 
