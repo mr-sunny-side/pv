@@ -180,6 +180,8 @@ def	handle_client(client_socket):
 			response_obj.body = handler()
 		else:
 			response_obj.body = handle_404()
+			response_obj.status = 404
+			response_obj.reason = '404 Not Found'
 
 		# レスポンスのコンテンツサイズのヘッダーを作成
 		content_length = f'{len(response_obj.body.encode('utf-8', errors='replace'))}'
