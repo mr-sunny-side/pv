@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import sys
 import threading
 import socket
@@ -21,7 +23,7 @@ class Request:
 		self.version = None
 
 class Response:
-	def	__init__(self, status=200, reason='OK', headers=None, body='')
+	def	__init__(self, status=200, reason='OK', headers=None, body=''):
 		self.status = status
 		self.reason = reason
 		self.headers = headers if headers else {}	# headerが空だった場合、辞書だけ作成
@@ -125,7 +127,7 @@ def	handle_404():
 
 	return body
 
-def	parse_http(http_line, request_obj)
+def	parse_http(http_line, request_obj):
 
 	parts = http_line.split()
 
@@ -143,10 +145,6 @@ def	route(path):
 		handler_dict[path] = handler
 		return handler_dict
 	return resister
-
-def	resist_handler(path,resister_func):
-
-
 
 def	handle_client(client_socket):
 	global client_count
@@ -174,17 +172,23 @@ def	handle_client(client_socket):
 		if not parse_http(request_lines[0], request_obj):
 			raise ValueError
 
-		# パスをレジスターに記憶させる
-		# その後パスごとにハンドラーを紐付けて辞書に登録
-		resister_func = route(request_obj.path)
-		if request_obj.path == '/' or request_obj.path == '/index.html':
-			resister_func(handle_index)
-		elif request_obj.path == '/about':
-			resister_func(handle_about)
-		elif request_obj.path == '/time':
-			resister_func(handle_time)
+		# レスポンスオブジェクトを作成
+		response_obj = Response()
+		# パスに応じたハンドラーを呼び出し、オブジェクトにhtmlを保存
+		handler = handler_dict.get(request_obj.path)
+		if handler:
+			response_obj.body = handler()
 		else:
-			resister_func(handle_404)
+			response_obj.body = handle_404()
+
+		# レスポンスのコンテンツサイズのヘッダーを作成
+		content_length = f'{len(response_obj.body.encode('utf-8', errors='replace'))}'
+		response_obj.headers['Content-Length'] = content_length
+
+		# 完成したレスポンスをエンコード
+		response_bytes = response_obj.to_bytes()
+
+		client_socket.sendall(response_bytes)
 
 
 	except ValueError as e:
@@ -199,6 +203,12 @@ def	run_server(host='127.0.0.1', port=8080):
 	server_socket.bind((host, port))
 	server_socket.listen(5)
 	print(f'Server listening {host}:{port}')
+
+	# ハンドラーを登録
+	route('/')(handle_index)
+	route('/index.html')(handle_index)
+	route('/about')(handle_about)
+	route('/time')(handle_time)
 
 	try:
 		while True:
@@ -217,3 +227,6 @@ def	run_server(host='127.0.0.1', port=8080):
 	finally:
 		server_socket.close()
 		print('Server closed')
+
+if __name__ == '__main__':
+	run_server()
