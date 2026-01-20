@@ -143,7 +143,7 @@ def	route(path):
 		global handler_dict
 
 		handler_dict[path] = handler
-		return handler_dict
+		return handler
 	return resister
 
 def	handle_client(client_socket):
