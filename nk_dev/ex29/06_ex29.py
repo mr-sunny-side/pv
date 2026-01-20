@@ -8,10 +8,10 @@ import threading
 from datetime import datetime
 
 """
+
 	静的ファイルのHTTPリクエストに対してレスポンスをするローカルサーバー
 
-	01-20:	従来のパスへの対応まで完了
-			静的ファイルの送信記述から
+	01-20:	md/static_file_guide.mdを読むところから
 
 """
 client_count = 0
