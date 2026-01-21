@@ -14,6 +14,7 @@ from datetime import datetime
 	01-20:	md/static_file_guide.mdを読むところから
 
 """
+
 client_count = 0
 lock = threading.Lock()
 routes = []
@@ -45,7 +46,6 @@ class Response:
 		response += '\r\n'
 		response += self.body
 		return response.encode('utf-8', errors='replace')
-
 
 def	route(path):
 	def	resister(handler):
@@ -221,11 +221,10 @@ def	handle_client(client_socket):
 		response += b'Content-type: text/plain\r\n'
 		response += b'Connection: close\r\n'
 		response += b'\r\n'
-		response += b'500 Internal Server Error'
+		response += b'500 Internal Server Error\n'
 		client_socket.sendall(response)
 	finally:
 		client_socket.close()
-
 
 def	run_server(host='127.0.0.1', port=8080):
 	server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
