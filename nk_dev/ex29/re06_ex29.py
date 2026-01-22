@@ -16,7 +16,8 @@ import mimetypes
 				- ハンドラーの記述 - 完了
 				- デコレータの記述 - 完了
 
-			handle_client関数の記述,エラー検出の具体化
+			handle_client関数：500エラーの送信記述
+			handle_client関数：エラー検出の具体化
 			staticディレクトリにhtmlを格納
 			クエリパラメータへの対応追加
 
@@ -54,6 +55,7 @@ class Response:
 		response = f'HTTP/1.1 {self.status} {self.reason}\r\n'
 		for label, detail in self.headers.items():
 			response += f'{label}: {detail}\r\n'
+		response += '\r\n'
 
 		response_bytes = response.encode('utf-8', errors='replace')	#一旦ヘッダーまでエンコード
 		# bodyのエンコード
@@ -117,6 +119,16 @@ def	handle_post(post_id):
 
 	return body
 
+def	handle_404():
+
+	body = create_html(
+		title='404 Not Found',
+		h1='404 Not Found',
+		content='<p>そのパスは存在しません</p>'
+	)
+
+	return body
+
 def	parse_http(http_line, request_obj):
 
 	parts = http_line.split()
@@ -176,7 +188,6 @@ def	serve_static(path):
 def	handle_client(client_socket, client_address):
 	"""
 	適切なエラー検出を模索
-	静的ファイルリクエスト、ハンドラーループの記述から
 
 	"""
 	global client_count
@@ -202,11 +213,40 @@ def	handle_client(client_socket, client_address):
 			print(f'ERROR parse_http/handle_client: Cannot parse http request')
 			raise ValueError
 
-		# 静的ファイルの捜索
-		# 静的ファイルではない場合、ハンドラーの捜索
+		# 静的ファイルのリクエストか検証
+		static_obj = serve_static(request_obj.path)
+		if static_obj:
+			response_obj = static_obj
+			response_bytes = response_obj.to_bytes()
+			client_socket.sendall(response_bytes)
+			return
 
+		# 動的パスのハンドラー呼び出し
+		response_obj = Response()
+		for pattern, handler in routes:
+			matched = pattern.match(request_obj.path)
+			if matched:
+				param = matched.groupdict()				# param == {user_id: 123}
+				response_obj.body = handler(**param)	# **param == **{user_id: 123} == user_id=123
+				break
+
+		# 静的ファイルでなく、ハンドラーもいなかったら404として処理
+		if not matched:
+			response_obj.status = 404
+			response_obj.reason = 'Not Found'
+			response_obj.body = handle_404()
+			response_bytes = response_obj.to_bytes()
+			client_socket.sendall(response_bytes)
+			return
+
+		# コンテンツ長をヘッダーに保存し、送信
+		response_obj.headers['Content-Length'] = len(response_obj.body.encode('utf-8', errors='replace'))
+		response_bytes = response_obj.to_bytes()
+		client_socket.sendall(response_bytes)
 	except ValueError as e:
 		print(e)
+	except Exception as e:
+		# 500エラーを送信
 	finally:
 		client_socket.close()
 
