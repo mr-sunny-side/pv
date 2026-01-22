@@ -16,7 +16,7 @@ import mimetypes
 				- ハンドラーの記述 - 完了
 				- デコレータの記述 - 完了
 
-			handle_client関数：500エラーの送信記述
+			handle_client関数：500エラーの送信記述 - 完了
 			handle_client関数：エラー検出の具体化
 			staticディレクトリにhtmlを格納
 			クエリパラメータへの対応追加
@@ -246,7 +246,14 @@ def	handle_client(client_socket, client_address):
 	except ValueError as e:
 		print(e)
 	except Exception as e:
-		# 500エラーを送信
+		print(f'ERROR handle_client: {e}')
+
+		response = b'HTTP/1.1 500 Internal Server Error\r\n'
+		response += b'Content-Type: text/plane\r\n'
+		response += b'Connection: close\r\n'
+		response += b'\r\n'
+		response += b'500 Internal Server Error\n'
+		client_socket.sendall(response)
 	finally:
 		client_socket.close()
 
