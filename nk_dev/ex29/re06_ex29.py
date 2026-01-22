@@ -2,6 +2,7 @@
 
 import re
 import sys
+import html
 import socket
 import threading
 
@@ -10,8 +11,11 @@ import mimetypes
 
 """
 	ex29_06の復習
-	01-22:	serve_static関数の記述 - 進行中
-			動的パスのルーティング
+	01-22:	serve_static関数の記述 - 完了
+			動的パスのルーティング - 完了
+				- ハンドラーの記述 - 完了
+				- デコレータの記述 - 完了
+
 			handle_client関数の記述,エラー検出の具体化
 			staticディレクトリにhtmlを格納
 			クエリパラメータへの対応追加
@@ -27,12 +31,14 @@ STATIC_DIR = Path(__file__).parent() / 'static'
 
 class Request:
 	def	__init__(self):
+
 		self.method = None
 		self.path = None
 		self.version = None
 
 class Response:
 	def	__init__(self, status=200, reason='OK', headers={}, body=''):
+
 		self.status = status
 		self.reason = reason
 		self.headers = headers
@@ -44,12 +50,12 @@ class Response:
 			self.headers['Connection'] = 'close'
 
 	def	to_bytes(self):
-		response = f'HTTP/1.1 {self.status} {self.reason}\r\n'
 
+		response = f'HTTP/1.1 {self.status} {self.reason}\r\n'
 		for label, detail in self.headers.items():
 			response += f'{label}: {detail}\r\n'
-		response_bytes = response.encode('utf-8', errors='replace')	#一旦ヘッダーまでエンコード
 
+		response_bytes = response.encode('utf-8', errors='replace')	#一旦ヘッダーまでエンコード
 		# bodyのエンコード
 		if isinstance(self.body, bytes):
 			response_bytes += self.body
@@ -57,6 +63,59 @@ class Response:
 			response_bytes += self.body.encode('utf-8', errors='replace')
 
 		return response_bytes
+
+""" デコレータ """
+def	route(path):
+	def	register(handler):
+
+		pattern = re.sub(r'<(\w+)>', r'?P<\1>[^/]+', path)
+		pattern = f'^{pattern}$'
+		routes.append((re.compile(pattern), handler))
+
+		return handler
+	return register
+
+def	create_html(title, h1, content):
+
+	html = f"""
+	<!DOCTYPE html>
+	<html lang="ja">
+	<head>
+		<meta charset="utf-8">
+		<title>{title}</title>
+	</head>
+	<body>
+		<h1>{h1}</h1>
+		{content}
+	</body>
+	</html>
+	"""
+
+	return html
+
+@route('/user/<user_id>')
+def	handle_user(user_id):
+
+	user_id = html.escape(user_id)
+	body = create_html(
+		title='Welcome User',
+		h1=f'Welcome {user_id} !',
+		content=f'<p>このページは{user_id}専用ページです</p>'
+	)
+
+	return body
+
+@route('/posts/<post_id>')
+def	handle_post(post_id):
+
+	post_id = html.escape(post_id)
+	body = create_html(
+		title='Welcome to Post Page',
+		h1=f'Welcome to Post {post_id}',
+		content=f'このページはポスト{post_id}の専用ページです'
+	)
+
+	return body
 
 def	parse_http(http_line, request_obj):
 
@@ -96,9 +155,22 @@ def	serve_static(path):
 	# 適したリードメソッドを呼ぶ
 	if mime_type.startswith('text/') or \
 		mime_type in ['application/javascript', 'application/json']:
+		# 静的ファイルはディスクにエンコードして保存されているので、読む形式を指定する
 		body = file_path.read_text(encoding='utf-8')
+		length = len(body.encode('utf-8', errors='replace'))
 	else:
 		body = file_path.read_bytes()
+		length = len(body)
+
+	return Response(
+		status=200,
+		reason='OK',
+		headers={
+			'Content-type': mime_type,
+			'Content-Length': length
+		},
+		body=body
+	)
 
 
 def	handle_client(client_socket, client_address):
@@ -114,6 +186,7 @@ def	handle_client(client_socket, client_address):
 			client_count += 1
 			client_id = client_count
 		print(f'handle_client: Connection detected id={client_id}', file=sys.stderr)
+		print(f'	address: {client_address[0]}:{client_address[1]}')
 
 		raw_data = client_socket.recv(4096)
 
@@ -144,7 +217,9 @@ def	run_server(host='127.0.0.1', port=8080):
 	server_socket.bind((host, port))
 	server_socket.listen(5)
 	print(f'Server listening {host}:{port}', file=sys.stderr)
-	# ルート、staticの表示
+	print('Registered handler:')
+	for pattern, handler in routes:
+		print(f'	{pattern.pattern} -> {handler.__name__}')
 
 	try:
 		while True:
