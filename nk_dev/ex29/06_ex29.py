@@ -7,17 +7,25 @@ import socket
 import threading
 from datetime import datetime
 
+from pathlib import Path
+import mimetypes
+
 """
 
 	静的ファイルのHTTPリクエストに対してレスポンスをするローカルサーバー
 
-	01-20:	md/static_file_guide.mdを読むところから
+	01-20:	to_bytesメソッドの修正 - 完了
+			serve_static_file関数の記述 - 完了
+			handle_client関数のis_static_pathの条件分岐を記述
 
 """
 
 client_count = 0
 lock = threading.Lock()
 routes = []
+
+# このファイルの親ディレクトリを取得、staticと連結し絶対パスにする
+STATIC_DIR = Path(__file__).parent / 'static'
 
 class Request:
 	def __init__(self):
@@ -42,10 +50,17 @@ class Response:
 
 		for label, detail in self.headers.items():
 			response += f'{label}: {detail}\r\n'
-
 		response += '\r\n'
-		response += self.body
-		return response.encode('utf-8', errors='replace')
+		response_bytes = response.encode('utf-8', errors='replace')
+
+		# バイナリならそのまま結合
+		if isinstance(self.body, bytes):
+			response_bytes += self.body
+		else:
+			response_bytes += self.body.encode('utf-8', errors='replace')
+
+		return response_bytes
+
 
 def	route(path):
 	def	resister(handler):
@@ -89,7 +104,7 @@ def	handle_html():
 	return body
 
 @route('/about')
-def	handle_html():
+def	handle_about():
 
 	body = create_html(
 		title='About',
@@ -166,6 +181,63 @@ def	parse_http(http_line, request_obj):
 	request_obj.method, request_obj.path, request_obj.version = parts
 	return True
 
+def	serve_static_file(path) -> Response | None:
+	# パスから先頭の '/' を削除
+	relative_path = path.lstrip('/')
+	# 静的ディレクトリと結合
+	file_path = STATIC_DIR / relative_path
+
+	# セキュリティチェック(try文で囲む)
+	try:
+		# 結合したファイルパスの相対パスを解決
+		file_path = file_path.resolve()
+		# 解決したパスが静的ディレクトリ下か確認
+		if not str(file_path).startswith(str(STATIC_DIR.resolve())):
+			print(f'Warning serve_static_file: Invalid path', file=sys.stderr)
+			print(f'	{str(file_path)}', file=sys.stderr)
+			return None
+	except Exception as e:
+		# その他不正なパスをすべてエラーとして拾う
+		print(f'Warning serve_static_file: Invalid path', file=sys.stderr)
+		print(f'	{e}', file=sys.stderr)
+		return None
+
+	# ファイルパスが存在するか、ファイルかを確認
+	if not file_path.exists() or not file_path.is_file():
+		print(f'serve_static_file: {path} is not static file', file=sys.stderr)
+		return None
+
+	# MIMEタイプを取得(エンコード値は使わない)
+	mime_types, _ = mimetypes.guess_type(str(file_path))
+	# 不明の場合はapplication/octet-streamで「とにかくバイナリ」とする
+	if mime_types is None:
+		mime_types = 'application/octet-stream'
+
+	# ファイルがテキスト系かバイナリ系か確認
+		# ファイルを適切に読み込み(テキスト系ならエンコードでutf-8を指定)
+	body = None
+	content_length = None
+	if mime_types.startswith('text/') or \
+		mime_types in ['application/javascript', 'application/json']:
+		body = file_path.read_text('utf-8')
+		content_length = len(body.encode('utf-8',errors='replace'))
+	else:
+		body = file_path.read_bytes()
+		content_length = len(body)
+
+
+
+	# レスポンスオブジェクトを返す
+	return Response(
+		status=200,
+		reason='OK',
+		headers={
+			'Content-Type': mime_types,
+			'Content-Length': content_length
+		},
+		body=body
+	)
+
 def	handle_client(client_socket):
 	global client_count
 
@@ -189,6 +261,15 @@ def	handle_client(client_socket):
 		request_obj = Request()
 		if not parse_http(request_line[0], request_obj):
 			raise ValueError
+
+
+		is_static_path = serve_static_file(request_obj.path)
+		if is_static_path:
+			response_obj = is_static_path
+			response_bytes = response_obj.to_bytes()
+			client_socket.sendall(response_bytes)
+			return
+
 
 		# ハンドラーの呼び出し
 		response_obj = Response()
