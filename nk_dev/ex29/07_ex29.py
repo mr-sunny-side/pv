@@ -21,10 +21,12 @@ from urllib.parse import urlparse, parse_qs
 			handle_client関数：500エラーの送信記述		- 完了
 			staticディレクトリにhtmlを格納				- time.html以外完了
 			ルーティングによるHTMLファイルへのアクセス	- time.html以外完了
+
 			クエリパラメータへの対応追加
 				- Requestクラスの属性を追加
 				- parse_http関数にクエリのパースを追加
 				- /searchパスのハンドラーを追加
+
 			handle_client関数：エラー検出の具体化
 
 
