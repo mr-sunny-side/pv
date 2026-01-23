@@ -26,10 +26,9 @@ from urllib.parse import urlparse, parse_qs
 				- Requestクラスの属性を追加
 				- parse_http関数にクエリのパースを追加
 				- /searchパスのハンドラーを追加
+				- ハンドルクライアントの修正
 
 			handle_client関数：エラー検出の具体化
-
-
 
 """
 
@@ -45,6 +44,8 @@ class Request:
 		self.method = None
 		self.path = None
 		self.version = None
+		self.query_str = None
+		self.query = {}
 
 class Response:
 	def	__init__(self, status=200, reason='OK', headers={}, body=''):
@@ -122,6 +123,37 @@ def	handle_about():
 
 	return body
 
+@route('/search')
+def	handle_search(request: Request):
+
+	body = """
+	<!DOCTYPE html>
+	<html lang="ja">
+	<head>
+	\t<meta charset="utf-8">
+	\t<title>Search</title>
+	</head>
+	<body>
+	\t<h1>Search Page</h1>
+	\t<p>以下はリクエストされたクエリです</p>
+	\t<ul>
+	"""
+
+	for label, detail in request.query.items():
+		label = html.escape(label)
+		detail = html.escape(' '.join(detail))		#detailはparse_qsメソッドでリストになっている
+		body += f'\t\t<li>{label}: {detail}</li>\n'
+
+	body += """
+	\t</ul>
+	</body>
+	</html>
+	"""
+
+	return body
+
+
+
 @route('/user/<user_id>')
 def	handle_user(user_id):
 
@@ -165,6 +197,10 @@ def	parse_http(http_line, request_obj):
 	request_obj.method = parts[0]
 	request_obj.version = parts[2]
 
+	url = urlparse(parts[1])
+	request_obj.path = url.path
+	request_obj.query_str = url.query
+	request_obj.query = parse_qs(url.query)
 
 	return True
 
@@ -257,6 +293,7 @@ def	handle_client(client_socket, client_address):
 			matched = pattern.match(request_obj.path)
 			if matched:
 				param = matched.groupdict()				# param == {user_id: 123}
+				param['request'] = request_obj
 				response_obj.body = handler(**param)	# **param == **{user_id: 123} == user_id=123
 				break
 
