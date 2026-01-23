@@ -6,8 +6,10 @@ import html
 import socket
 import threading
 
-from pathlib import Path
 import mimetypes
+from pathlib import Path
+
+from urllib.parse import urlparse, parse_qs
 
 """
 	ex29_06の復習
@@ -19,7 +21,10 @@ import mimetypes
 			handle_client関数：500エラーの送信記述		- 完了
 			staticディレクトリにhtmlを格納				- time.html以外完了
 			ルーティングによるHTMLファイルへのアクセス	- time.html以外完了
-			クエリパラメータへの対応追加				- query_parameter_guide.mdを読むところから
+			クエリパラメータへの対応追加
+				- Requestクラスの属性を追加
+				- parse_http関数にクエリのパースを追加
+				- /searchパスのハンドラーを追加
 			handle_client関数：エラー検出の具体化
 
 
@@ -57,8 +62,8 @@ class Response:
 		response = f'HTTP/1.1 {self.status} {self.reason}\r\n'
 		for label, detail in self.headers.items():
 			response += f'{label}: {detail}\r\n'
-		response += '\r\n'
 
+		response += '\r\n'
 		response_bytes = response.encode('utf-8', errors='replace')	#一旦ヘッダーまでエンコード
 		# bodyのエンコード
 		if isinstance(self.body, bytes):
@@ -155,7 +160,10 @@ def	parse_http(http_line, request_obj):
 	if len(parts) != 3:
 		return False
 
-	request_obj.method, request_obj.path, request_obj.version = parts
+	request_obj.method = parts[0]
+	request_obj.version = parts[2]
+
+
 	return True
 
 def	serve_static(path):
