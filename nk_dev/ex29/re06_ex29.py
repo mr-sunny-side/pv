@@ -16,9 +16,10 @@ import mimetypes
 				- ハンドラーの記述 - 完了
 				- デコレータの記述 - 完了
 
-			handle_client関数：500エラーの送信記述 - 完了
+			handle_client関数：500エラーの送信記述		- 完了
+			staticディレクトリにhtmlを格納				- time.html以外完了
+			ルーティングによるHTMLファイルへのアクセス	- time.html以外完了
 			handle_client関数：エラー検出の具体化
-			staticディレクトリにhtmlを格納
 			クエリパラメータへの対応追加
 
 
@@ -94,6 +95,24 @@ def	create_html(title, h1, content):
 	"""
 
 	return html
+
+@route('/')
+def	handle_html():
+
+	file_path = STATIC_DIR / 'index.html'
+	file_path = file_path.resolve()
+	body = file_path.read_text(encoding='utf-8')
+
+	return body
+
+@route('/about')
+def	handle_about():
+
+	file_path = STATIC_DIR / 'about.html'
+	file_path = file_path.resolve()
+	body = file_path.read_text(encoding='utf-8')
+
+	return body
 
 @route('/user/<user_id>')
 def	handle_user(user_id):
