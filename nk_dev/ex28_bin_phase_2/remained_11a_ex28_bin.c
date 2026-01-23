@@ -159,7 +159,7 @@ int	main(int argc, char **argv) {
 
 	TmpHeader	tmp = {0};
 	FmtChunk	fmt = {0};
-	int		is_fmt = 0;
+	int			is_fmt = 0;
 	uint32_t	data_size = 0;
 	long		data_offset = 0;
 	//int	process_read(FILE *fp, TmpHeader *tmp, FmtChunk *fmt, int *is_fmt, uint32_t *data_size, long *data_offset) {
