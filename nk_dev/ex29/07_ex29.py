@@ -126,31 +126,31 @@ def	handle_about():
 @route('/search')
 def	handle_search(request: Request):
 
-	body = """
-	<!DOCTYPE html>
-	<html lang="ja">
-	<head>
-	\t<meta charset="utf-8">
-	\t<title>Search</title>
-	</head>
-	<body>
-	\t<h1>Search Page</h1>
-	\t<p>以下はリクエストされたクエリです</p>
-	\t<ul>
-	"""
+	line = [
+		'<!DOCTYPE html>',
+		'<html lang="ja">',
+		'<head>',
+		'\t<meta charset="utf-8">',
+		'\t<title>Search</title>',
+		'</head>',
+		'<body>',
+		'\t<h1>Search Page</h1>',
+		'\t<p>以下はリクエストされたクエリです</p>',
+		'\t<ul>'
+	]
 
 	for label, detail in request.query.items():
 		label = html.escape(label)
 		detail = html.escape(' '.join(detail))		#detailはparse_qsメソッドでリストになっている
-		body += f'\t\t<li>{label}: {detail}</li>\n'
+		line.append(f'\t\t<li>{label}: {detail}</li>')
 
-	body += """
-	\t</ul>
-	</body>
-	</html>
-	"""
+	line.extend([
+		'\t</ul>',
+		'</body>',
+		'</html>'
+	])
 
-	return body
+	return '\n'.join(line)
 
 
 
