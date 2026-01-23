@@ -1,4 +1,4 @@
-#!/ust/bin/env python3
+#!/usr/bin/env python3
 
 import re
 import sys
@@ -19,8 +19,9 @@ import mimetypes
 			handle_client関数：500エラーの送信記述		- 完了
 			staticディレクトリにhtmlを格納				- time.html以外完了
 			ルーティングによるHTMLファイルへのアクセス	- time.html以外完了
+			クエリパラメータへの対応追加				- query_parameter_guide.mdを読むところから
 			handle_client関数：エラー検出の具体化
-			クエリパラメータへの対応追加
+
 
 
 """
@@ -29,7 +30,7 @@ client_count = 0
 routes = []
 lock = threading.Lock()
 
-STATIC_DIR = Path(__file__).parent() / 'static'
+STATIC_DIR = Path(__file__).parent / 'static'
 
 class Request:
 	def	__init__(self):
@@ -71,7 +72,7 @@ class Response:
 def	route(path):
 	def	register(handler):
 
-		pattern = re.sub(r'<(\w+)>', r'?P<\1>[^/]+', path)
+		pattern = re.sub(r'<(\w+)>', r'(?P<\1>[^/]+)', path)
 		pattern = f'^{pattern}$'
 		routes.append((re.compile(pattern), handler))
 
