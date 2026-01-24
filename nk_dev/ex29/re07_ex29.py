@@ -29,7 +29,7 @@ routes = []
 				- /searchパスのハンドラーを追加			- 完了
 				- ハンドルクライアントの記述			- 完了
 
-			ValueErrorで出力されるロジックエラーの修正
+			ロジックエラーの修正
 
 
 """
@@ -231,7 +231,7 @@ def	static_search(path) -> Response | None:
 def parse_http(http_line, request_obj: Request):
 
 	parts = http_line.split()
-	if not len(parts) != 3:
+	if len(parts) != 3:
 		return False
 
 	request_obj.method = parts[0]
