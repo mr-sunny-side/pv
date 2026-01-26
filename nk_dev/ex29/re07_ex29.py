@@ -17,7 +17,6 @@ lock = threading.Lock()
 routes = []
 
 """
-	01-26:	POSTリクエストに対するレスポンス
 
 			serve_static関数の記述	- 完了
 			to_bytesメソッドの記述	- 完了
