@@ -16,7 +16,9 @@ client_count = 0
 lock = threading.Lock()
 
 def	handle_client(client_socket, client_address):
-	pass
+	try:
+		data
+
 
 
 def	run_server(host='127.0.0.1', port=8080):

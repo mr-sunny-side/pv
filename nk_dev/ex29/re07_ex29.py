@@ -17,7 +17,9 @@ lock = threading.Lock()
 routes = []
 
 """
-	01-24:	serve_static関数の記述	- 完了
+	01-26:	POSTリクエストに対するレスポンス
+
+			serve_static関数の記述	- 完了
 			to_bytesメソッドの記述	- 完了
 			動的パスのルーティング	- time.html意外完了
 				- ハンドラーの記述	- 上に同じ
@@ -29,7 +31,7 @@ routes = []
 				- /searchパスのハンドラーを追加			- 完了
 				- ハンドルクライアントの記述			- 完了
 
-			re07_logic_errors.md を読むところから
+			GETリクエストのロジックエラー修正			- 完了
 
 
 """
