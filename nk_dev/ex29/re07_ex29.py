@@ -43,11 +43,13 @@ class Request:
 		self.query = {}
 
 class Response:
-	def	__init__(self, status=200, reason='OK', headers={}, body=''):
+	def	__init__(self, status=200, reason='OK', headers=None, body=''):
+		# 引数をデフォ引数として定義すると、普通に定義したのと同じになる
+		# すべてのレスポンスクラスで共有されてしまうので、辞書定義は関数の中で行う
 
 		self.status = status
 		self.reason = reason
-		self.headers = headers
+		self.headers = headers if headers else {}
 		self.body = body
 
 		if 'Content-Type' not in self.headers:
@@ -98,8 +100,9 @@ def	create_html(title, h1, content):
 
 	return '\n'.join(lines)
 
+# ハンドラーはgroupdictを受けとり、必要な引数のみを使う
 @route('/')
-def	handle_html():
+def	handle_html(**kwargs):
 	file_path = STATIC_DIR / 'index.html'
 	body = file_path.read_text(encoding='utf-8')
 	length = len(body.encode('utf-8', errors='replace'))
@@ -109,13 +112,13 @@ def	handle_html():
 		reason='OK',
 		headers={
 			'Content-Type': 'text/html; charset=utf-8',
-			'COntent-Length': length
+			'Content-Length': length
 		},
 		body=body
 	)
 
 @route('/about')
-def	handle_about():
+def	handle_about(**kwargs):
 	file_path = STATIC_DIR / 'about.html'
 	body = file_path.read_text(encoding='utf-8')
 	length = len(body.encode('utf-8', errors='replace'))
@@ -131,7 +134,7 @@ def	handle_about():
 	)
 
 @route('/user/<user_id>')
-def	handle_user(user_id):
+def	handle_user(user_id, **kwargs):
 
 	user_id = html.escape(user_id)
 	content = f'\t<p>ようこそ {user_id} !</p>\n'
@@ -154,7 +157,7 @@ def	handle_user(user_id):
 	)
 
 @route('/search')
-def	handle_search(request_obj: Request):
+def	handle_search(request_obj: Request, **kwargs):
 
 	content = '\t<p>このページは検索ページのダーミーページです</p>\n'
 	content += '\t<p><以下はあなたが入力したクエリです</p>\n'
@@ -184,11 +187,31 @@ def	handle_search(request_obj: Request):
 		body=body
 	)
 
+def	handle_404():
+
+	content = '\t<p>そのパスは存在しません</p>\n'
+	body = create_html(
+		title='404 Not Found',
+		h1='404 Not Found',
+		content=content
+	)
+	length = len(body.encode('utf-8',errors='replace'))
+
+	return Response(
+		status=404,
+		reason='Not Found',
+		headers={
+			'Content-Type': 'text/html; charset=utf-8',
+			'Content-Length':length
+		},
+		body=body
+	)
+
 def	static_search(path) -> Response | None:
 
-	file_path = path.lstrip()
+	file_path = path.lstrip('/')
 	file_path = STATIC_DIR / file_path
-	file_path.resolve()
+	file_path = file_path.resolve()
 
 	# staticディレクトリ下かチェック
 	try:
@@ -284,15 +307,39 @@ def	handle_client(client_socket, client_address):
 		# /, /about, /time, /search
 		for pattern, handler in routes:
 			matched = pattern.match(request_obj.path)
-			param = matched.groupdict()
-			param['request_obj'] = request_obj
-			response_obj = handler(**param)
+			if matched:
+				param = matched.groupdict()
+				param['request_obj'] = request_obj
+				response_obj = handler(**param)
+				break
+
+		# ハンドラーが見つからなかったら404ページ生成
+		if not matched:
+			response_obj = handle_404()
+			response_bytes = response_obj.to_bytes()
+			client_socket.sendall(response_bytes)
+			return
 
 		response_bytes = response_obj.to_bytes()
 		client_socket.sendall(response_bytes)
 	except ValueError as e:
 		print(f'ValueError handle_client: {e}')
-		return
+
+		response = b'HTTP/1.1 400 Bad Request\r\n'
+		response += b'Content-Type: text/plain\r\n'
+		response += b'Connection: close\r\n'
+		response += b'\r\n'
+		response += b'400 Bad Request\n'
+		client_socket.sendall(response)
+	except Exception as e:
+		print(f'ERROR Exception handle_client: {e}')
+
+		response = b'HTTP/1.1 500 Internal Server Error\r\n'
+		response += b'Content-Type: text/plain\r\n'
+		response += b'Connection: close\r\n'
+		response += b'\r\n'
+		response += b'500 Internal Server Error\n'
+		client_socket.sendall(response)
 	finally:
 		client_socket.close()
 
