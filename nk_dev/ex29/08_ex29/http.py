@@ -15,8 +15,8 @@ class Request:
 		self.path		= None
 		self.version	= None
 		self.query		= {}
-		self.length		= None
-		self.body		= ''
+		self.length		= 0
+		self.body		= {}
 
 def	parse_http(http_line: str, request_obj: Request) -> bool:
 
@@ -32,7 +32,8 @@ def	parse_http(http_line: str, request_obj: Request) -> bool:
 	request_obj.query = parse_qs(url.query)
 	return True
 
-def	get_request(client_socket) -> int:
+def	get_request(client_socket, request_obj) -> int:
+	## headerの取得と分離
 	# ヘッダー終了読み込みまでループ
 	buffer = b''
 	while b'\r\n\r\n' not in buffer:
@@ -43,28 +44,27 @@ def	get_request(client_socket) -> int:
 
 	# \r\nを見つけてそこで分離
 	header_end	= buffer.find(b'\r\n\r\n')
-	header		= buffer[:header_end - 1]	# ヘッダー終了文字を除いてヘッダーを保存
+	header		= buffer[:header_end]		# ヘッダー終了文字の直前まで保存
 	body_parts	= buffer[header_end + 4:]	# スライス記法では範囲外のアクセスでエラーにならない
 
 	# ヘッダーはこれから追加されないのでデコード
 	header = header.decode('utf-8', errors='replace')
 
 	## httpヘッダーを保存
-	request_obj			= Request()
-	header_line			= header.split('\r\n')
+	header_line	= header.split('\r\n')
 	if not parse_http(header_line[0], request_obj):
 		print(f'ERROR parse_http/get_header: http_line')
 		return 1
 
-	# GETメソッドならここで終了
+	## GETメソッドならここで終了
 	if request_obj.method == 'GET':
 		return 0
 
 	## bodyの取得
-	# body長を取得
+	# body長を取得し、intに変換
 	for header in header_line[1:]:
 		if 'Content-Length' in header:
-			request_obj.length = header.split(':')[1].strip()
+			request_obj.length = int(header.split(':')[1].strip())
 			break
 
 	# body長を取得できなかったらエラー
@@ -73,12 +73,25 @@ def	get_request(client_socket) -> int:
 		return 1
 
 	# content-lengthの値から残りのbodyを読み込み
-	while len(body_parts) < request_obj.length:
-		buffer = client_socket.recv(4096)
-		if not buffer:
-			break
-		body_parts += buffer
+	buffer = client_socket.recv(request_obj.length - len(body_parts))
+	body_parts += buffer
 
 	# bodyをデコードして保存
-	request_obj.body = body_parts.decode('utf-8',errors='replace')
+	body_parts = body_parts.decode('utf-8', errors='replace')
+	request_obj.body = parse_qs(body_parts)
 	return 0
+
+def	print_request(request_obj):
+	print('=== Request Details ===')
+	print(f'Method:{request_obj.method:>20}')
+	print(f'Path:{request_obj.path:>20}')
+	print(f'Version:{request_obj.version:>20}')
+	print(f'Length:{request_obj.length:>20}')
+	print('Query:')
+	for label, detail in request_obj.query.items():
+		detail = ','.join(detail)
+		print(f'\t{label}:{detail}')
+	print('Request Body:')
+	for label, detail in request_obj.body.items():
+		detail = ','.join(detail)
+		print(f'\t{label}:{detail}')

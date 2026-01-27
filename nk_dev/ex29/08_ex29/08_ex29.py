@@ -1,8 +1,11 @@
+#!/usr/bin/env python3
+
 import sys
 import socket
 import threading
 
-from http import get_request, parse_http
+from http import get_request, print_request, Request
+from route import handle_post_method, static_search
 
 """
 	POSTメソッドに対応するサーバー
@@ -11,7 +14,9 @@ from http import get_request, parse_http
 		- handle_client関数
 
 	01-26:	http.py の記述を完了
-			POST、GETメソッドそれぞれリクエスト取得の確認から
+			POST、GETメソッドそれぞれリクエスト取得の確認	- 完了
+			POSTメソッドに対するレスポンス					- 完了
+			GETメソッドに対するルートレスポンス				- ルートリスト捜索関数をroute.pyに記述から
 
 """
 
@@ -19,19 +24,48 @@ client_count = 0
 lock = threading.Lock()
 
 def	handle_client(client_socket, client_address):
+
+	global client_count
 	try:
 		# idを付与
 		with lock:
-			client_count += 1
-			client_id = client_count
+			client_count	+= 1
+			client_id		= client_count
 		print('handle_client: Connection detected')
 		print(f'\t{client_address[0]}:{client_address[1]} id={client_id}')
 
 		# リクエスト情報を取得
-		if get_request(client_socket) == 1:
+		request_obj = Request()
+		result = get_request(client_socket, request_obj)
+		if result == 1:		# 400として処理
 			raise ValueError
+		elif result == -1:	# 切断として終了
+			return
 
-		# POSTとGETで分岐
+		# リクエスト内容を出力
+		print_request(request_obj)
+
+		# POSTメソッドなら204として処理
+		if request_obj.method == 'POST':
+			response_obj	= handle_post_method()
+			response_bytes	= response_obj.to_bytes()
+			client_socket.sendall(response_bytes)
+			return
+
+		## GETメソッドの処理
+		# 静的ファイルの捜索
+		static_data = static_search(request_obj.path)
+		if static_data:
+			response_obj	= static_data
+			response_bytes	= response_obj.to_bytes()
+			client_socket.sendall(response_bytes)
+			return
+
+		# 静的ファイル出ない場合、ハンドラーを捜索
+
+
+
+
 	except ValueError as e:
 		print(f'ValueError handle_client: {e}')
 
@@ -75,3 +109,6 @@ def	run_server(host='127.0.0.1', port=8080):
 	finally:
 		server_socket.close()
 		print('server closed')
+
+if __name__ == '__main__':
+	run_server()
