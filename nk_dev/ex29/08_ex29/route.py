@@ -81,6 +81,19 @@ def	static_search(path) -> Response | None:
 		body=body
 	)
 
+def	search_route(request_obj) -> Response | None:
+
+	global routes
+	for pattern, handler in routes:
+		matched = pattern.match(request_obj.path)
+		if matched:
+			param = matched.groupdict()
+			param['request_obj'] = request_obj
+			response_obj = handler(**param)
+			return response_obj
+	return None
+
+
 def	route(path):
 	def	register(handler):
 
@@ -146,6 +159,39 @@ def	handle_about(**kwargs):
 		body=body
 	)
 
+@route('/search')
+def	handle_search(request_obj, **kwargs):
+
+	title	= 'Search Page'
+	h1		= 'Search Page'
+	content = '\t<p>このページは検索ページのダミーページです</p>\n'
+	content += '\t<p>以下はあなたが入力したクエリです</p>\n'
+	content += '\t<ul>\n'
+	for label, detail in request_obj.query:
+		label	= html.escape(label)
+		detail	= ','.join(detail)
+		detail	= html.escape(detail)
+		content += f'\t\t<li>{label}: {detail}</li>\n'
+
+	content	= '\t</ul>\n'
+	body 	= create_html(
+		title=title,
+		h1=h1,
+		content=content
+	)
+	length	= len(body.encode('utf-8', errors='replace'))
+
+	return	Response(
+		status=200,
+		reason='OK',
+		headers={
+			'Content-Type': 'text/html; charset=utf-8',
+			'Content-Length': length
+		},
+		body=body
+	)
+
+
 @route('/user/<user_id>')
 def	handle_user(user_id, **kwargs):
 
@@ -159,7 +205,7 @@ def	handle_user(user_id, **kwargs):
 	)
 
 	length = len(body.encode('utf-8', errors='replace'))
-	return Response(
+	return	Response(
 		status=200,
 		reason='OK',
 		headers={
@@ -171,14 +217,33 @@ def	handle_user(user_id, **kwargs):
 
 def	handle_post_method(**kwargs) -> Response:
 
-	body = 'POSTメソッドは正常に処理されました\n'
-	length = len(body.encode('utf-8', errors='replace'))
-	return Response(
+	body	= 'POSTメソッドは正常に処理されました\n'
+	length	= len(body.encode('utf-8', errors='replace'))
+	return	Response(
 		status=200,
 		reason='OK',
 		headers={
 			'Content-Type': 'text/plain',
 			'Content-Length': length,
+		},
+		body=body
+	)
+
+def	handle_404(**kwargs):
+
+	body	= create_html(
+		title='404 Not Found',
+		h1='404 Not Found',
+		content='\t<p>そのパスは存在しません</p>'
+	)
+
+	length 	= len(body.encode('utf-8', errors='replace'))
+	return	Response(
+		status=404,
+		reason='Not Found',
+		headers={
+			'Content-Type': 'text/html; charset=utf-8',
+			'Content-Length': length
 		},
 		body=body
 	)
