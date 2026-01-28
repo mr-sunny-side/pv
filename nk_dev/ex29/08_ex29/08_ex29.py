@@ -16,7 +16,10 @@ from route import handle_post_method, handle_404, static_search, search_route
 	01-26:	static_search関数のエラー出力が暴発するのを修正
 			searchパスがBad Requestになるエラーを修正
 			POSTメソッドの確認
-			-curl "http://localhost:8080/search?q=python&test=hello&test=server&greetings=Hello+Server"
+
+			searchパスのエラー現状
+			- curl "http://localhost:8080/search?q=python&test=hello&test=server&greetings=Hello+Server"
+			- ValueError handle_client: not enough values to unpack (expected 2, got 1)
 
 			POST、GETメソッドそれぞれリクエスト取得の確認	- 完了
 			POSTメソッドに対するレスポンス					- 完了
