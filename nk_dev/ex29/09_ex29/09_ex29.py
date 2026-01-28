@@ -30,12 +30,7 @@ def	handle_client(client_socket, client_address):
 		logging.info('handle_client: Connection detected')
 		logging.info(f'\t{client_address[0]}:{client_address[1]} id={client_id}')
 
-		# 送信データが空なら終了
-		raw_data = client_socket.recv(BUFFER_SIZE)
-		if not raw_data:
-			logging.warning('Warning handle_client: Request is empty')
-			return
-
+		# ヘッダー終了までバッファ
 
 
 	except ValueError as e:
