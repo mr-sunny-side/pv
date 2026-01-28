@@ -44,7 +44,7 @@ def	static_search(path) -> Response | None:
 
 	# セキュリティチェック
 	try:
-		if str(file_path).startswith(str(STATIC_DIR.resolve())):
+		if not str(file_path).startswith(str(STATIC_DIR.resolve())):
 			print('Warning static_search: Invalid path')
 			return None
 	except Exception as e:
@@ -167,13 +167,13 @@ def	handle_search(request_obj, **kwargs):
 	content = '\t<p>このページは検索ページのダミーページです</p>\n'
 	content += '\t<p>以下はあなたが入力したクエリです</p>\n'
 	content += '\t<ul>\n'
-	for label, detail in request_obj.query:
+	for label, detail in request_obj.query.items():
 		label	= html.escape(label)
 		detail	= ','.join(detail)
 		detail	= html.escape(detail)
 		content += f'\t\t<li>{label}: {detail}</li>\n'
 
-	content	= '\t</ul>\n'
+	content	+= '\t</ul>\n'
 	body 	= create_html(
 		title=title,
 		h1=h1,
