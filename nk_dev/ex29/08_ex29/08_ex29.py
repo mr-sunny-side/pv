@@ -23,8 +23,8 @@ from route import handle_post_method, handle_404, static_search, search_route
 
 """
 
-client_count	= 0
-lock			= threading.Lock()
+client_count = 0
+lock = threading.Lock()
 
 def	handle_client(client_socket, client_address):
 

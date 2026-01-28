@@ -197,7 +197,7 @@ def	handle_user(user_id, **kwargs):
 
 	user_id = html.escape(user_id)
 	content = f'\t<p>ようこそ {user_id} !</p>\n'
-	content = f'\t<p>これはユーザー専用のダミーページです</p>\n'
+	content += f'\t<p>これはユーザー専用のダミーページです</p>\n'
 	body = create_html(
 		title=f'User Page',
 		h1=f'Welcome {user_id} !',
