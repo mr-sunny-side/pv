@@ -30,6 +30,12 @@ def	handle_client(client_socket, client_address):
 		logging.info('handle_client: Connection detected')
 		logging.info(f'\t{client_address[0]}:{client_address[1]} id={client_id}')
 
+		# 送信データが空なら終了
+		raw_data = client_socket.recv(BUFFER_SIZE)
+		if not raw_data:
+			logging.warning('Warning handle_client: Request is empty')
+			return
+
 
 
 	except ValueError as e:
@@ -43,6 +49,9 @@ def	handle_client(client_socket, client_address):
 		logging.warning(e)
 	except Exception as e:
 		logging.error(f'ERROR Exception handle_client: {e}')
+		# 500 Internal Error
+	finally:
+		client_socket.close()
 
 
 def	run_server(host=LOCAL_HOST, port=PORT):
