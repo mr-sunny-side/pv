@@ -33,7 +33,7 @@ def	handle_client(client_socket, client_address):
 
 
 	except ValueError as e:
-		logging.error(f'ValueERROR handle_client: {e}')
+		logging.error(f'ERROR ValueError handle_client: {e}')
 		# 400 Bad Request
 	except socket.timeout:
 		logging.warning('Warning handle_client: Client timeout')
@@ -42,7 +42,7 @@ def	handle_client(client_socket, client_address):
 		logging.warning('Warning handle_client: Client connection error')
 		logging.warning(e)
 	except Exception as e:
-		logging.error(f'Exception ERROR handle_client: {e}')
+		logging.error(f'ERROR Exception handle_client: {e}')
 
 
 def	run_server(host=LOCAL_HOST, port=PORT):
