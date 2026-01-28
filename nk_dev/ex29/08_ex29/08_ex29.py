@@ -19,7 +19,22 @@ from route import handle_post_method, handle_404, static_search, search_route
 
 			searchパスのエラー現状
 			- curl "http://localhost:8080/search?q=python&test=hello&test=server&greetings=Hello+Server"
-			- ValueError handle_client: not enough values to unpack (expected 2, got 1)
+
+			handle_client: Connection detected
+				127.0.0.1:34104 id=2
+			=== Request Details ===
+			Method:                 GET
+			Path:             /search
+			Version:            HTTP/1.1
+			Length:                   0
+			Query:
+				q:python
+				test:hello,server
+				greetings:Hello Server
+			Request Body:
+			Warning static_search: Invalid path
+			ValueError handle_client: not enough values to unpack (expected 2, got 1)
+
 
 			POST、GETメソッドそれぞれリクエスト取得の確認	- 完了
 			POSTメソッドに対するレスポンス					- 完了
