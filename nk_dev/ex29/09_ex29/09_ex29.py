@@ -14,8 +14,10 @@ from route import routes, static_search
 	08_ex29/md/improvement_guide.md を読んで機能を追加
 
 	02-01:	handle_client関数の記述から(ハンドラーの呼び出し)
+
 			ヘッダーインジェクションの防止記述(to_bytesメソッド)
 			run_server関数で最初にルートの表示
+			handle_client関数でエラー送信の記述
 
 
 """
