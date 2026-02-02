@@ -14,11 +14,8 @@ from error import handle_400, handle_404, handle_408, handle_500
 	POST, GETメソッドに対応したサーバー
 	08_ex29/md/improvement_guide.md を読んで機能を追加
 
-	02-01:	各エラーのハンドラー記述から
+	02-02: 09の機能追加から
 
-			ヘッダーインジェクションの防止記述(to_bytesメソッド)
-			run_server関数で最初にルートの表示
-			handle_client関数でエラー送信の記述
 
 
 """
