@@ -50,21 +50,22 @@ def	route(path: str):
 
 def	create_html(title, h1, content):
 
-	html = dedent(f"""
-		<!DOCTYPE html>
-		<html lang="ja">
-		<head>
-		\t<meta charset="utf-8">
-		\t<title>{title}</title>
-		</head>
-		<body>
-		\t<h1>{h1}</h1>
-		{content}
-		</body>
-		</html>
-	""")
+	# dedent関数を使うと複数行のcontentへの対応が複雑化するので却下
+	html = [
+		'<!DOCTYPE html>',
+		'<html lang="ja">',
+		'<head>',
+		'\t<meta charset="utf-8">',
+		f'\t<title>{title}</title>',
+		'</head>',
+		'<body>',
+		f'\t<h1>{h1}</h1>',
+		content,
+		'</body>',
+		'</html>'
+	]
 
-	return html
+	return '\n'.join(html)
 
 @route('/')
 def handle_html(**kwargs) -> Response:	# ハンドラー捜索の際、一貫してアンパック引数を渡す
@@ -101,7 +102,7 @@ def	handle_about(**kwargs) -> Response:
 	)
 
 @route('/user/<user_id>')
-def	handle_user(user_id, **kwargs):
+def	handle_user(user_id: str, **kwargs) -> Response:
 	user_id = html.escape(user_id)
 	title = 'User Page'
 	h1 = f'Welcome {user_id} !'
@@ -121,14 +122,13 @@ def	handle_user(user_id, **kwargs):
 	)
 
 @route('/search')
-def	handle_search(request_obj: Request, **kwargs):
+def	handle_search(request_obj: Request, **kwargs) -> Response:
 	title = 'Search Page'
 	h1 = 'Search Page'
-	content = dedent("""
-		\t<p>これは検索ページのダミーです</p>
-		\t<p>以下はあなたが入力したクエリです</p>
-		\t<ul>
-	""")
+	content = '\t<p>これは検索ページのダミーです</p>\n'
+	content += '\t<p>以下はあなたが入力したクエリです</p>\n'
+	content += '\t<ul>\n'
+
 
 	for label, detail in request_obj.query.items():
 		label = html.escape(label)
@@ -150,9 +150,39 @@ def	handle_search(request_obj: Request, **kwargs):
 		body=body
 	)
 
+# POSTメソッドに対して入力内容をミラーしたhtmlを作成する
+def	handle_post_method(request_obj: Request) -> Response:
+	title = 'POST Handler'
+	h1 = '200 OK'
+	content = '\t<p>POSTメソッドは正常に処理されました</p>\n'
+	content += '\t<p>以下はあなたが入力したリクエストボディです</p>\n'
+	content += '\t<ul>\n'
+
+
+	for label, detail in request_obj.body.items():
+		label = html.escape(label)
+		detail = ','.join(detail)
+		detail = html.escape(detail)
+		content += f'\t\t<li>{label}: {detail}</li>\n'
+	content += '\t<ul>\n'
+
+	body = create_html(title, h1, content)
+	length = len(body.encode('utf-8', errors='replace'))
+
+	return Response(
+		status=200,
+		reason='OK',
+		headers={
+			'Content-Type': 'text/html; charset=utf-8',
+			'Content-Length': length
+		},
+		body=body
+	)
+
+
 def static_search(path: str) -> Response | None:
 	# file_path変数を作成
-	path = path.rstrip('/')
+	path = path.lstrip('/')
 	file_path = STATIC_DIR / path
 	file_path = file_path.resolve()
 

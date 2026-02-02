@@ -89,9 +89,9 @@ def	get_request(client_socket, request_obj) -> int:
 
 def	print_request(request_obj):
 	logging.info('===== Request Details =====')
-	logging.info(f'method:{request_obj.method:>25}')
-	logging.info(f'Path:{request_obj.path:>25}')
-	logging.info(f'Version:{request_obj.version:>25}')
+	logging.info(f'{"method":<10}:{request_obj.method:>25}')
+	logging.info(f'{"Path":<10}:{request_obj.path:>25}')
+	logging.info(f'{"Version":<10}:{request_obj.version:>25}')
 	logging.info('Query:')
 	for label, detail in request_obj.query.items():
 		detail = ','.join(detail)
