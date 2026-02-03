@@ -15,6 +15,9 @@ class Request:
 		self.query = {}
 		self.body = {}
 
+class FormData:
+
+
 def	parse_http(http_line: str, request_obj: Request) -> bool:
 	parts = http_line.split()
 	if len(parts) != 3:
@@ -28,6 +31,10 @@ def	parse_http(http_line: str, request_obj: Request) -> bool:
 	request_obj.query = parse_qs(url.query)
 
 	return True
+
+def	get_form_data(header_line: list) -> int:
+	pass
+
 
 def	get_request(client_socket, request_obj) -> int:
 	## ヘッダー終了までバッファ
@@ -62,6 +69,16 @@ def	get_request(client_socket, request_obj) -> int:
 	if request_obj.method == 'GET':
 		return 0
 	logging.debug('get_request: request is GET method')
+
+
+	"""
+	form-dataの処理への移行 ↓
+
+	"""
+	# content-typeを確認、multipart/form-dataなら専用関数を呼び出し
+	for header in header_line[1:]:
+		if 'Content-Type: multipart/form-data' in header:
+			# multipart専用関数を呼び出し
 
 	## POSTメソッドの読み込み・保存
 	# ボディ長を取得
