@@ -11,12 +11,10 @@ class Request:
 		self.method = None
 		self.path = None
 		self.version = None
+		self.type = None
 		self.length = None
 		self.query = {}
 		self.body = {}
-
-class FormData:
-
 
 def	parse_http(http_line: str, request_obj: Request) -> bool:
 	parts = http_line.split()
@@ -32,7 +30,7 @@ def	parse_http(http_line: str, request_obj: Request) -> bool:
 
 	return True
 
-def	get_form_data(header_line: list) -> int:
+def	get_form_data(body_part: bytes) -> int:
 	pass
 
 
@@ -65,44 +63,48 @@ def	get_request(client_socket, request_obj) -> int:
 		return -1
 	logging.debug('get_request: got http request in header')
 
-	# GETメッソドならここで終了
+	# GETメソッドならここで終了
 	if request_obj.method == 'GET':
 		return 0
 	logging.debug('get_request: request is GET method')
 
-
-	"""
-	form-dataの処理への移行 ↓
-
-	"""
-	# content-typeを確認、multipart/form-dataなら専用関数を呼び出し
+	# Content-Type, Lengthを保存
 	for header in header_line[1:]:
-		if 'Content-Type: multipart/form-data' in header:
-			# multipart専用関数を呼び出し
+		if 'Content-Type' in header:
+			request_obj.type = header.split(':')[1].strip()
+		if 'Content-Length' in header:
+			request_obj.length = int(header.split(':')[1].strip())
 
-	## POSTメソッドの読み込み・保存
-	# ボディ長を取得
-	for header in header_line[1:]:
-		header = header.split(':')
-		if header[0].strip() == 'Content-Length':
-			request_obj.length = int(header[1].strip())
-			break
-	logging.debug('get_request: found Content-Length in header')
-
-	# ボディ長が取得できなければエラー
-	if request_obj.length is None:
+	# ボディ長・タイプが取得できなければエラー
+	if request_obj.length is None or request_obj.type is None:
 		logging.error('get_request: Cannot find Content-Length')
 		return -1
+	logging.debug('get_request: got Content-Type and Content-Length')
 
 	# 残りのボディ読み込み
 	buffer = client_socket.recv(request_obj.length - len(body_part))
 	body_part += buffer
 	logging.debug('get_request: latest body_part is loaded')
 
-	# ボディをデコード・パースして保存
-	body_part = body_part.decode('utf-8', errors='replace')
-	request_obj.body = parse_qs(body_part)
-	return 0
+	# 単なるPOSTメソッドならボディをデコード・パースして保存
+	if request_obj.method == 'POST' and request_obj.type == 'application/x-www-form-urlencoded':
+		body_part = body_part.decode('utf-8', errors='replace')
+		request_obj.body = parse_qs(body_part)
+		return 0
+
+	"""
+	form-dataの処理への移行
+		1.	Content-TypeとLengthを保存
+		2.	残りのデータをbody_partに保存
+
+		get_form_dataを呼び出し
+		- body_partとrequest_objを渡す
+
+	"""
+	# multipart/form-dataならget_form_data関数を呼び出し
+	if request_obj.method == 'POST' and request_obj.type == 'multipart/form-data':
+		pass
+
 
 def	print_request(request_obj):
 	logging.info('===== Request Details =====')

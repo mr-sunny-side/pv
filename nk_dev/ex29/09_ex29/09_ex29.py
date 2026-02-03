@@ -13,8 +13,8 @@ from error import handle_400, handle_404, handle_408, handle_500
 """
 	POST, GETメソッドに対応したサーバー
 
-	02-03:	専用関数の記述から
-			09_ex29/md/の資料を参照
+	02-03:	get_requestの修正が完了
+			get_form_data関数の記述と、get_request関数へget_form_data関数の記述から
 
 			1. POSTメソッドの際にエンコーディング方式を確認(get_request)
 			2. multipart/form-dataの場合、専用関数に移行(get_form_data)
