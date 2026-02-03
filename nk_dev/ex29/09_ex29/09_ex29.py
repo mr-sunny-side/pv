@@ -13,7 +13,7 @@ from error import handle_400, handle_404, handle_408, handle_500
 """
 	POST, GETメソッドに対応したサーバー
 
-	02-03:	get_requestの修正が完了
+	02-03:	multipart/form-dataのヘッダー取得まで記述
 			get_form_data関数の記述と、get_request関数へget_form_data関数の記述から
 
 			1. POSTメソッドの際にエンコーディング方式を確認(get_request)

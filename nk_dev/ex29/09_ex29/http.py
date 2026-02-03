@@ -12,6 +12,7 @@ class Request:
 		self.path = None
 		self.version = None
 		self.type = None
+		self.boundary = None
 		self.length = None
 		self.query = {}
 		self.body = {}
@@ -71,7 +72,10 @@ def	get_request(client_socket, request_obj) -> int:
 	# Content-Type, Lengthを保存
 	for header in header_line[1:]:
 		if 'Content-Type' in header:
-			request_obj.type = header.split(':')[1].strip()
+			request_obj.type = header.split()[1].strip()
+			if request_obj.type == 'multipart/form-data;':	# multipart/form-dataならboundary文字列を取得
+				boundary_start = header.find('boundary=')
+				request_obj.boundary = header[boundary_start + len('boundary='):]
 		if 'Content-Length' in header:
 			request_obj.length = int(header.split(':')[1].strip())
 
@@ -111,6 +115,10 @@ def	print_request(request_obj):
 	logging.info(f'{"method":<10}:{request_obj.method:>25}')
 	logging.info(f'{"Path":<10}:{request_obj.path:>25}')
 	logging.info(f'{"Version":<10}:{request_obj.version:>25}')
+	logging.info(f'{"Type":<10}:{request_obj.type:>25}')
+	if request_obj.type == 'multipart/form-data;':
+		logging.info(f'{"Boundary:":<10}:')
+		logging.info(f'\t{request_obj.boundary}')
 	logging.info('Query:')
 	for label, detail in request_obj.query.items():
 		detail = ','.join(detail)
