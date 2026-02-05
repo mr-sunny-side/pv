@@ -14,11 +14,10 @@ from error import handle_400, handle_404, handle_408, handle_500
 	POST, GETメソッドに対応したサーバー
 
 	02-03:	multipart/form-dataのヘッダー取得まで記述
-			get_form_data関数の記述と、get_request関数へget_form_data関数の記述から
 			- 9時まで待ってclaude codeにもう一度プロンプトを送る
 
 			1. POSTメソッドの際にエンコーディング方式を確認(get_request)
-			2. multipart/form-dataの場合、専用関数に移行(get_form_data)
+			2. multipart/form-data;の場合、専用関数に移行(get_form_data)
 			3. 各パートに分割し、保存・出力
 
 """
