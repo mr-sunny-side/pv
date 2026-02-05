@@ -15,6 +15,7 @@ from error import handle_400, handle_404, handle_408, handle_500
 
 	02-03:	multipart/form-dataのヘッダー取得まで記述
 			get_form_data関数の記述と、get_request関数へget_form_data関数の記述から
+			- 9時まで待ってclaude codeにもう一度プロンプトを送る
 
 			1. POSTメソッドの際にエンコーディング方式を確認(get_request)
 			2. multipart/form-dataの場合、専用関数に移行(get_form_data)
@@ -80,26 +81,24 @@ def	handle_client(client_socket, client_address):
 		return
 
 	except ValueError as e:
-		logging.error(f'ValueError handle_client:')
-		logging.error(e)
+		logging.exception(f'ValueError handle_client:')
 
 		# 400 Bad Request
 		response_obj = handle_400()
 		response_bytes = response_obj.to_bytes()
 		client_socket.sendall(response_bytes)
 	except socket.timeout:
-		logging.warning('handle_client: Client timeout')
+		logging.warning('handle_client: Client timeout', exc_info=True)
 
 		# 408 Request Timeout
 		response_obj = handle_408()
 		response_bytes = response_obj.to_bytes()
 		client_socket.sendall(response_bytes)
 	except ConnectionError as e:
-		logging.error('handle_client: Client connection error')
-		logging.error(e)
+		logging.exception('handle_client: Client connection error')
 	except Exception as e:
-		logging.error(f'Exception handle_client:')
-		logging.error(e)
+		logging.exception(f'Exception handle_client:')
+		# 詳細なエラー行数を見るためにexceptionを記述
 
 		# 500 Internal Error
 		response_obj = handle_500()

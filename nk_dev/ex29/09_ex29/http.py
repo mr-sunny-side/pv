@@ -1,3 +1,4 @@
+import re
 import socket
 import logging
 from urllib.parse import urlparse, parse_qs
@@ -31,8 +32,20 @@ def	parse_http(http_line: str, request_obj: Request) -> bool:
 
 	return True
 
-def	get_form_data(body_part: bytes) -> int:
-	pass
+def	get_form_data(body_part: bytes, request_obj: Request) -> int:
+	boundary_bytes = request_obj.boundary.encode('utf-8')	# body_partはバイト列なのでboundaryをエンコード
+	parts = body_part.split(boundary_bytes)					# エンコードしたboundaryでsplit
+
+	for boundary_part in parts[1:]:							# 最初は"--"で始まるので飛ばす
+		line = boundary_part.split(b'\r\n\r\n')
+		line[0] = line[0].decode('utf-8', errors='replace').strip('\r\n')	# 正規表現を使うためにname=列だけデコード
+
+		if line[0].strip('\r\n') == '--':
+			break
+
+		matched = re.search(r'name="(\w+)"', line[0])		# nameを捕捉
+		if matched:
+			request_obj.body[matched.group(1)] = line[1]	# Requestオブジェクトに保存
 
 
 def	get_request(client_socket, request_obj) -> int:
@@ -77,7 +90,7 @@ def	get_request(client_socket, request_obj) -> int:
 				boundary_start = header.find('boundary=')
 				request_obj.boundary = header[boundary_start + len('boundary='):]
 		if 'Content-Length' in header:
-			request_obj.length = int(header.split(':')[1].strip())
+			request_obj.length = header.split(':')[1].strip()	# int変換するとprint_requestでエラーになる
 
 	# ボディ長・タイプが取得できなければエラー
 	if request_obj.length is None or request_obj.type is None:
@@ -86,12 +99,13 @@ def	get_request(client_socket, request_obj) -> int:
 	logging.debug('get_request: got Content-Type and Content-Length')
 
 	# 残りのボディ読み込み
-	buffer = client_socket.recv(request_obj.length - len(body_part))
+	buffer = client_socket.recv(int(request_obj.length) - len(body_part))
 	body_part += buffer
 	logging.debug('get_request: latest body_part is loaded')
 
 	# 単なるPOSTメソッドならボディをデコード・パースして保存
 	if request_obj.method == 'POST' and request_obj.type == 'application/x-www-form-urlencoded':
+		logging.debug('get_request: method=POST, Type=application/x-www-form-urlencoded')
 		body_part = body_part.decode('utf-8', errors='replace')
 		request_obj.body = parse_qs(body_part)
 		return 0
@@ -106,8 +120,9 @@ def	get_request(client_socket, request_obj) -> int:
 
 	"""
 	# multipart/form-dataならget_form_data関数を呼び出し
-	if request_obj.method == 'POST' and request_obj.type == 'multipart/form-data':
-		pass
+	if request_obj.method == 'POST' and request_obj.type == 'multipart/form-data;':
+		logging.debug('get_request: method=POST, Type=multipart/form-data;')
+		get_form_data(body_part, request_obj)
 
 
 def	print_request(request_obj):
@@ -117,7 +132,7 @@ def	print_request(request_obj):
 	logging.info(f'{"Version":<10}:{request_obj.version:>25}')
 	logging.info(f'{"Type":<10}:{request_obj.type:>25}')
 	if request_obj.type == 'multipart/form-data;':
-		logging.info(f'{"Boundary:":<10}:')
+		logging.info(f'{"Boundary":<10}:')
 		logging.info(f'\t{request_obj.boundary}')
 	logging.info('Query:')
 	for label, detail in request_obj.query.items():
@@ -125,5 +140,8 @@ def	print_request(request_obj):
 		logging.info(f'\t{label}:{detail}')
 	logging.info('Request Body:')
 	for label, detail in request_obj.body.items():
+		if isinstance(detail, bytes):
+			logging.info(f'\t{label}: len={len(detail)}')
+			continue
 		detail = ','.join(detail)
 		logging.info(f'\t{label}:{detail}')

@@ -161,6 +161,9 @@ def	handle_post_method(request_obj: Request) -> Response:
 
 	for label, detail in request_obj.body.items():
 		label = html.escape(label)
+		if isinstance(detail, bytes):
+			content += f'\t\t<li>{label}: len={len(detail)}</li>'
+			continue
 		detail = ','.join(detail)
 		detail = html.escape(detail)
 		content += f'\t\t<li>{label}: {detail}</li>\n'
